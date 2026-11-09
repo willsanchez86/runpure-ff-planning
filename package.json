@@ -1,0 +1,7 @@
+{
+  "private": true,
+  "scripts": {
+    "prepare": "git config core.hooksPath .githooks",
+    "check": "node .claude/skills/doc-check/check.mjs"
+  }
+}

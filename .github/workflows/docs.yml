@@ -1,0 +1,19 @@
+name: docs
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with: { fetch-depth: 0 }
+      - uses: actions/setup-node@v4
+        with: { node-version: 24 }
+      - name: Base commit
+        run: echo "BASE=${{ github.event.pull_request.base.sha || github.event.before }}" >> "$GITHUB_ENV"
+      - name: Frozen ADRs unchanged
+        run: node scripts/check-adr-immutability.mjs --base "$BASE"
+      - name: Doc check
+        run: node .claude/skills/doc-check/check.mjs --base "$BASE"

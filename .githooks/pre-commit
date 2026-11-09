@@ -1,0 +1,4 @@
+#!/bin/sh
+# Enabled by `npm install` (package.json "prepare"), or: git config core.hooksPath .githooks
+node scripts/check-adr-immutability.mjs || exit 1
+node .claude/skills/doc-check/check.mjs --staged

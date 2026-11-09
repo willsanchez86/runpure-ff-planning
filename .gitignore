@@ -1,0 +1,8 @@
+# Obsidian window state (rewritten whenever a note is opened)
+.obsidian/workspace.json
+.obsidian/workspaces.json
+.obsidian/workspace-mobile.json
+
+# OS files
+.DS_Store
+Thumbs.db
