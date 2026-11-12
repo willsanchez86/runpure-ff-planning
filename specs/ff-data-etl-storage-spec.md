@@ -1,9 +1,11 @@
 # Implementation Spec — Data ETL & Storage
 
-**Date:** 2026-11-10 · **Version:** v2.15 · **Status:** Draft. Every decision is recorded in §0.2; none is open.
+**Date:** 2026-11-12 · **Version:** v2.16 · **Status:** Draft. Every decision is recorded in §0.2; none is open.
 **Companion to:** the Data ETL & storage technical PRD, [`prds/infra-data-etl-and-storage.md`](../prds/infra-data-etl-and-storage.md).
 **Implements:** ADR-0001 to ADR-0013, and ADR-0017 for the operator query fields ([`design/architecture-decisions.md`](../design/architecture-decisions.md)).
 
+> **v2.16 (2026-11-12):** Claude's corrections while writing the data-table `CREATE TABLE` files, validated against freshly fetched files (data dictionary A3, A7). Schedules' `pfr` game id is typed `VARCHAR(16) ascii`, matching snap counts' `pfr_game_id` (both are ASCII). The injuries dictionary note now states that the file ships two 16-column headers (2017–2024 with `date_modified`, 2025+ with `season_type` second), so the 17-column table is their union, both columns are nullable, and injuries is mapped and validated by column name (§7.2.3, §8 already describe the two headers).
+>
 > **v2.15 (2026-11-10):** a download that fails partway through now fails its piece instead of leaving the run waiting forever with the run lock held (`nflverse.service.ts` uses `pipeline` instead of `pipe`, which doesn't pass stream errors on).
 >
 > **v2.14 (2026-11-10):** TypeScript pinned to 6.0 (§12). `npm install` picked up TypeScript 7.0, which typescript-eslint, used by the backend's JSDoc lint check, doesn't support yet.

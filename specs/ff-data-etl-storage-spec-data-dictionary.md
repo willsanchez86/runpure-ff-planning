@@ -4,7 +4,7 @@ Part of [`ff-data-etl-storage-spec.md`](ff-data-etl-storage-spec.md), §7.2. Mer
 
 Every column of every ingested file, profiled 2026-11-08 (teams and depth charts 2026-11-09 UTC). **Observed** is the type found in the data; **Nulls** the share of empty values; **Proposed MySQL type** applies §7.2.2 (integers sized to twice the largest value seen). Descriptions come from nflverse's dictionaries, linked per dataset; where a dataset's note says so, they are approximate or borrowed.
 
-**Validated 2026-11-10 against freshly downloaded files** (every season 2017–2026 of the five seasonal datasets, the three single files, and the 2026 depth charts and play-by-play): every file's columns match this dictionary in name and order, and every observed value fits its proposed type except `kick_distance`, corrected below. Other findings are in the spec, §7.2.3.
+**Validated 2026-11-10 against freshly downloaded files** (every season 2017–2026 of the five seasonal datasets, the three single files, and the 2026 depth charts and play-by-play): every file's columns match this dictionary in name and order — injuries excepted, which ships two 16-column headers (A7) — and every observed value fits its proposed type except `kick_distance`, corrected below. Other findings are in the spec, §7.2.3.
 
 **Seasons:** the seasonal datasets were profiled for 2017–2026, a wider range than Phase 1 loads (2022–2026, ADR-0006). Types sized on the wider range hold for the narrower one; row counts below are for the profile.
 
@@ -341,7 +341,7 @@ Grain: one game. Natural key: game_id. Profiled: 7,548 rows (single file, 1999�
 | 16 | `old_game_id` | integer | 0.0% | 1999091200 to 2027011015 | INT UNSIGNED | The old id for the game assigned by the NFL. |
 | 17 | `gsis` | integer | 1.8% | 588 to 1999101011 | INT UNSIGNED | The id of the game issued by the NFL Game Statistics & Information System. |
 | 18 | `nfl_detail_id` | text | 96.4% | up to 36 chars | VARCHAR(64) ascii | The id of the game issued by NFL Detail. |
-| 19 | `pfr` | text | 0.0% | up to 12 chars | VARCHAR(16) | The id of the game issued by [Pro-Football-Reference](https://www.pro-football-reference.com/) |
+| 19 | `pfr` | text | 0.0% | up to 12 chars | VARCHAR(16) ascii | The id of the game issued by [Pro-Football-Reference](https://www.pro-football-reference.com/) |
 | 20 | `pff` | integer | 38.1% | 731 to 30726 | SMALLINT UNSIGNED | The id of the game issued by [Pro Football Focus](https://www.pff.com/) |
 | 21 | `espn` | integer | 0.0% | 190912001 to 401873187 | INT UNSIGNED | The id of the game issued by [ESPN](https://www.espn.com/) |
 | 22 | `ftn` | integer | 74.2% | 5058 to 7290 | SMALLINT UNSIGNED | No dictionary entry |
@@ -493,6 +493,8 @@ Grain: one player on one team in one season. Natural key: season, team, gsis_id.
 Descriptions: [nflreadr dictionary](https://cloud.r-project.org/web/packages/nflreadr/vignettes/dictionary_injuries.html). 
 
 Grain: one player's report for one game week. Natural key: season, week, game_type, team, gsis_id (latest report wins). Profiled: 53,262 rows (2017–2026). 17 columns; 16 have an nflreadr dictionary entry.
+
+The file ships two 16-column headers, so this 17-column table is their union and no single file has every column: 2017–2024 files end with `date_modified` and omit `season_type`; 2025+ files place `season_type` second (after `season`) and omit `date_modified` (confirmed from the 2022, 2024 and 2025 files, 2026-11-12). Both columns are therefore nullable, and injuries must be mapped and validated by column name, accepting either header (§8).
 
 | # | Column | Observed | Nulls | Range or values | Proposed MySQL type | Description |
 |---|---|---|---|---|---|---|
