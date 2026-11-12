@@ -4,6 +4,10 @@ Part of [`ff-data-etl-storage-spec.md`](ff-data-etl-storage-spec.md), §7.2. Mer
 
 Every column of every ingested file, profiled 2026-11-08 (teams and depth charts 2026-11-09 UTC). **Observed** is the type found in the data; **Nulls** the share of empty values; **Proposed MySQL type** applies §7.2.2 (integers sized to twice the largest value seen). Descriptions come from nflverse's dictionaries, linked per dataset; where a dataset's note says so, they are approximate or borrowed.
 
+**Validated 2026-11-10 against freshly downloaded files** (every season 2017–2026 of the five seasonal datasets, the three single files, and the 2026 depth charts and play-by-play): every file's columns match this dictionary in name and order, and every observed value fits its proposed type except `kick_distance`, corrected below. Other findings are in the spec, §7.2.3.
+
+**Seasons:** the seasonal datasets were profiled for 2017–2026, a wider range than Phase 1 loads (2022–2026, ADR-0006). Types sized on the wider range hold for the narrower one; row counts below are for the profile.
+
 ## A1. Weekly player stats (`stats_player`)
 
 Descriptions: [nflreadr dictionary](https://ftp.fau.de/cran/web/packages/nflreadr/vignettes/dictionary_player_stats.html). The dictionary predates 36 newer columns, shown as having no entry.
@@ -395,7 +399,7 @@ Grain: one team code. Natural key: team_abbr. Profiled: 36 rows (single file), 2
 
 Descriptions: [nflreadr dictionary](https://ftp.fau.de/cran/web/packages/nflreadr/vignettes/dictionary_players.html). 
 
-Grain: one player. Natural key: gsis_id. Profiled: 24,867 rows (single file). 39 columns; 39 have an nflreadr dictionary entry.
+Grain: one player. Natural key: gsis_id. Profiled: 24,867 rows (single file); 24,737 on 2026-11-10, after nflverse dropped 130 players whose last season was 2012. 39 columns; 39 have an nflreadr dictionary entry.
 
 | # | Column | Observed | Nulls | Range or values | Proposed MySQL type | Description |
 |---|---|---|---|---|---|---|
@@ -575,7 +579,7 @@ Grain: one play. Natural key: game_id, play_id. Profiled: 70,118 rows (2025 full
 | 8 | `posteam` | text | 5.5% | up to 3 chars | VARCHAR(4) ascii | String abbreviation for the team with possession. |
 | 9 | `posteam_type` | text | 5.5% | 2 values: away, home | VARCHAR(8) | String indicating whether the posteam team is home or away. |
 | 10 | `defteam` | text | 5.5% | up to 3 chars | VARCHAR(4) ascii | String abbreviation for the team on defense. |
-| 11 | `side_of_field` | text | 7.2% | up to 3 chars | VARCHAR(4) ascii | String abbreviation for which team's side of the field the team with possession is currently on. |
+| 11 | `side_of_field` | text | 7.2% | up to 3 chars | VARCHAR(4) ascii | String abbreviation for which team's side of the field the team with possession is currently on. A team code, or `50` at midfield, so this column has no foreign key to `team`. |
 | 12 | `yardline_100` | integer | 7.1% | 1 to 99 | TINYINT UNSIGNED | Numeric distance in the number of yards from the opponent's endzone for the posteam. |
 | 13 | `game_date` | date | 0.0% | 2025-09-04 to 2026-11-05 | DATE | Date of the game. |
 | 14 | `quarter_seconds_remaining` | integer | 0.0% | 0 to 900 | SMALLINT UNSIGNED | Seconds remaining in the quarter. |
@@ -608,7 +612,7 @@ Grain: one play. Natural key: game_id, play_id. Profiled: 70,118 rows (2025 full
 | 41 | `run_location` | text | 69.7% | 3 values: left, middle, right | VARCHAR(8) | String indicator for location of run: left, middle, or right. |
 | 42 | `run_gap` | text | 77.7% | 3 values: end, guard, tackle | VARCHAR(8) | String indicator for line gap of run: end, guard, or tackle |
 | 43 | `field_goal_result` | text | 97.6% | 3 values: blocked, made, missed | VARCHAR(16) | String indicator for result of field goal attempt: made, missed, or blocked. |
-| 44 | `kick_distance` | integer | 84.8% | 0 to 81 | TINYINT UNSIGNED | Numeric distance in yards for kickoffs, field goals, and punts. |
+| 44 | `kick_distance` | integer | 84.8% | -2 to 86 (2026-11-10; a punt of -2 yards) | SMALLINT | Numeric distance in yards for kickoffs, field goals, and punts. |
 | 45 | `extra_point_result` | text | 97.3% | 3 values: blocked, failed, good | VARCHAR(16) | Outcome of the extra point try: good, failed, blocked, aborted, or a safety scored on a defensive touchback. |
 | 46 | `two_point_conv_result` | text | 99.7% | 2 values: failure, success | VARCHAR(16) | Outcome of the two point conversion try: success, failure, return, or a safety scored on a defensive touchback. |
 | 47 | `home_timeouts_remaining` | integer | 0.0% | 0 to 3 | TINYINT UNSIGNED | Numeric timeouts remaining in the half for the home team. |

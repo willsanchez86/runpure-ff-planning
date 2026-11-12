@@ -44,6 +44,7 @@ The project owner (William Sanchez) is the only approver. Claude may draft and p
 | **Master Test & Deployment Plan** (MTDP) | Acceptance matrix, CI/CD, rollback | `design/mtdp.md`; not written yet, required before the first hosted deploy | §4 |
 | **Research** | Evidence behind decisions, with sources | `research/<topic>-research-YYYY-MM-DD.md` | — |
 | **Decision reviews** | Dated working records of a review of open decisions | `design/reviews/` | — |
+| **Prototypes** | Working mock-ups on sample data that a PRD builds from; not the product | `prototypes/` | — |
 
 ### Document A: PRDs
 - **Purpose:** what is built and why, with scope boundaries so the project doesn't creep.
@@ -72,4 +73,5 @@ The project owner (William Sanchez) is the only approver. Claude may draft and p
 | Implementation specs | Project owner | Per change to that piece | `specs/` |
 | MTDP | Project owner | Per release | `design/mtdp.md` (not yet written) |
 | Research | Claude, for the owner | When its decision is revisited | `research/` |
+| Prototypes | Project owner | When the PRD that uses it changes | `prototypes/` |
 | Templates and this document | Project owner | When a rule changes | `governance/` |

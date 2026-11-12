@@ -1,6 +1,6 @@
 # Architecture Decision Log — Runpure FF
 
-**Owner / decider:** you · **Last updated:** 2026-11-09
+**Owner / decider:** you · **Last updated:** 2026-11-10
 Index of the project's architecture decisions. Each decided item is a full ADR in `design/decisions/`, written with the template in [`governance/templates.md`](../governance/templates.md). This log contains only what you have explicitly decided, plus the open decisions you listed. Claude does not add options, recommendations or outcomes here unless you decide them.
 
 **Renumbered 2026-11-08:** superseded ADRs were updated in place with the decisions that replaced them, the replacing ADRs were deleted, and the rest were renumbered. Old → new: ADR-0010 and ADR-0014 → ADR-0005; ADR-0016 → ADR-0008; ADR-0011 → ADR-0010; ADR-0012 → ADR-0011; ADR-0013 → ADR-0012; ADR-0015 → ADR-0013.
@@ -16,14 +16,14 @@ Index of the project's architecture decisions. Each decided item is a full ADR i
 | [ADR-0003](decisions/ADR-0003-use-independent-sources-with-sleeper-filling-specific-gaps.md) | Use independent sources as the base, with Sleeper filling specific gaps | Accepted (revised in place 2026-11-09; Sleeper set aside 2026-11-06, not in Phase 1) | 2026-11-05 |
 | [ADR-0004](decisions/ADR-0004-keep-dated-copies-of-every-sleeper-player-list-pull.md) | Keep dated copies of every Sleeper player-list pull | Accepted (copies kept in MySQL, per ADR-0005; parked with Sleeper; revised in place 2026-11-09) | 2026-11-05 |
 | [ADR-0005](decisions/ADR-0005-store-all-pipeline-data-in-mysql-with-no-bucket.md) | Store all pipeline data in MySQL, with no object storage bucket | Accepted (revised in place 2026-11-08) | 2026-11-05 |
-| [ADR-0006](decisions/ADR-0006-backfill-2017-2026-once-then-load-only-data-that-can-still-change.md) | Backfill 2017–2026 once, then load only data that can still change | Accepted (revised in place 2026-11-08 and 2026-11-09; play-by-play and depth charts current season only, per ADR-0013) | 2026-11-05 |
+| [ADR-0006](decisions/ADR-0006-backfill-2022-2026-once-then-load-only-data-that-can-still-change.md) | Backfill 2022–2026 once, then load only data that can still change | Accepted (revised in place 2026-11-08, 2026-11-09 and 2026-11-10: start season 2022; team table upserted; play-by-play and depth charts current season only, per ADR-0013) | 2026-11-05 |
 | [ADR-0007](decisions/ADR-0007-calculate-fantasy-points-in-the-app-from-stored-stats.md) | Calculate fantasy points in the app from stored stats | Accepted | 2026-11-05 |
 | [ADR-0008](decisions/ADR-0008-run-the-api-and-pipeline-in-a-separate-express-backend.md) | Run the API and pipeline in a separate Node.js Express backend, as a layered modular monolith | Accepted (revised in place 2026-11-08 and 2026-11-09) | 2026-11-05 |
 | [ADR-0009](decisions/ADR-0009-write-the-data-pipeline-in-typescript.md) | Write the data pipeline in TypeScript | Accepted (revised in place 2026-11-08) | 2026-11-05 |
 | [ADR-0010](decisions/ADR-0010-map-database-rows-to-code-by-hand-without-an-orm.md) | Map database rows to code by hand, without an ORM | Accepted (revised in place 2026-11-08) | 2026-11-05 |
 | [ADR-0011](decisions/ADR-0011-apply-schema-changes-by-hand-with-no-migration-tool.md) | Apply schema changes by hand, with no migration tool | Accepted (revised in place 2026-11-08 and 2026-11-09) | 2026-11-05 |
-| [ADR-0012](decisions/ADR-0012-transform-pipeline-data-in-typescript-and-mysql-with-no-transform-library.md) | Transform pipeline data in TypeScript and MySQL, with no transform library | Accepted (revised in place 2026-11-08 and 2026-11-09) | 2026-11-06 |
-| [ADR-0013](decisions/ADR-0013-keep-play-by-play-and-depth-charts-for-the-current-season-only.md) | Keep play-by-play and depth charts for the current season only | Accepted (revised in place 2026-11-08 and 2026-11-09) | 2026-11-06 |
+| [ADR-0012](decisions/ADR-0012-transform-pipeline-data-in-typescript-and-mysql-with-no-transform-library.md) | Transform pipeline data in TypeScript and MySQL, with no transform library | Accepted (revised in place 2026-11-08, 2026-11-09 and 2026-11-10) | 2026-11-06 |
+| [ADR-0013](decisions/ADR-0013-keep-play-by-play-and-depth-charts-for-the-current-season-only.md) | Keep play-by-play and depth charts for the current season only | Accepted (revised in place 2026-11-08, 2026-11-09 and 2026-11-10) | 2026-11-06 |
 | [ADR-0014](decisions/ADR-0014-call-the-express-api-directly-from-the-browser.md) | Call the Express API directly from the browser | Accepted (revised in place 2026-11-09: cross-references) | 2026-11-08 |
 | [ADR-0015](decisions/ADR-0015-authenticate-users-with-firebase-authentication.md) | Authenticate users with Firebase Authentication | Accepted (revised in place 2026-11-09: cross-references) | 2026-11-08 |
 | [ADR-0016](decisions/ADR-0016-define-the-api-contract-in-the-graphql-schema.md) | Define the API contract in the GraphQL schema | Accepted (revised in place 2026-11-09) | 2026-11-08 |

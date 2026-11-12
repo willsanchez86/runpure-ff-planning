@@ -15,12 +15,13 @@ Every planning document for Runpure FF (Fantasy Workbench): PRDs, system design,
 | `design/reviews/` | Dated records of decision reviews (the 2026-11-08 open-decisions review) |
 | `specs/` | Implementation specs: the Data ETL & storage spec and its data dictionary (Appendix A) |
 | `research/` | Research behind the decisions, with sources |
+| `prototypes/` | Working mock-ups on sample data; `ff-workbench-sample-data.html` is the Weekly review & analytics working version (open it in a browser) |
 | [`AGENTS.md`](AGENTS.md), [`CLAUDE.md`](CLAUDE.md) | The rules every agent follows here (CLAUDE.md imports AGENTS.md) |
 | `.claude/skills/` | Claude Code skills: `adr-new`, `adr-supersede`, `doc-check` (its `check.mjs` is the doc check) |
 | `.claude/settings.json`, `.claude/hooks/guard.mjs` | Claude Code hooks: block edits to frozen ADRs; run the doc check after each edit and before finishing |
 | `scripts/check-adr-immutability.mjs`, `.githooks/pre-commit` | Commit check: frozen ADRs unchanged, then the doc check |
 | `.github/workflows/docs.yml` | The same checks on every pull request and push to `main`; can't be skipped |
-| `code-repo-kit/` | Files to copy into the backend and frontend repos so their pull requests must cite planning files |
+| `code-repo-kit/` | Files to copy into the backend and frontend repos so their pull requests must cite planning files, and `init-runpure-backend.ps1`, which creates the backend repo |
 
 Not written yet: the Master Test & Deployment Plan (`design/mtdp.md`), due before the first hosted deploy; implementation specs for the other PRDs, each written just before that piece is built.
 

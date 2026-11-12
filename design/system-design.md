@@ -1,6 +1,7 @@
 # System Design — Fantasy Workbench (Runpure FF)
 
-**Status:** Draft v2.0 · **Owner:** William Sanchez · **Date:** 2026-11-09
+**Status:** Draft v2.1 · **Owner:** William Sanchez · **Date:** 2026-11-10
+**v2.1 (2026-11-10):** §8 lists what to consider before the first deployment, from the 2026-11-10 security review of the backend setup script (owner: defer to the deployment phase).
 **v2.0 (2026-11-09):** rewritten to match the accepted ADRs (ADR-0001 to ADR-0017). Removed: DuckDB, the storage bucket and its snapshot layout, Parquet and mart files, GitHub Actions as the pipeline host, Postgres and SQLite, the single repository, and the medallion layer names. The guardrail's ten requirements (§0) are kept word for word as the owner set them; a new column says how each is met now.
 **v1.0–v1.4 (2026-11-05):** first drafts, written before the ADRs; superseded by v2.0.
 **Purpose:** how the system is put together: components, boundaries, data flow, and how the multi-user guardrail is met. Each choice is decided in an ADR (`design/decisions/`); this document puts them in one picture and links to them. It decides nothing itself.
@@ -49,7 +50,7 @@
 
 **Constraints:** one developer; TypeScript for the backend (ADR-0008, ADR-0009), on Node 24 (ADR-0017); Next.js for the frontend (ADR-0002); MySQL only (ADR-0005).
 
-**Load estimate:** one user. Phase 1 data is about 300 MB of CSV and about 515 MB in MySQL (ETL spec §7.3). The player list has about 1,250 fantasy-relevant rows; weekly player stats about 19,400 rows a season. Launch load doesn't size anything; simplicity and reliability do. Multi-user readiness is a design driver (§0).
+**Load estimate:** one user. Phase 1 data is about 235 MB of CSV and about 410 MB in MySQL (ETL spec §7.3). The player list has about 1,250 fantasy-relevant rows; weekly player stats about 19,400 rows a season. Launch load doesn't size anything; simplicity and reliability do. Multi-user readiness is a design driver (§0).
 
 ## 2. High-level design
 
@@ -113,7 +114,7 @@ Purple: the backend process · Gray: outside services, the database, the browser
 | Language | TypeScript on Node | ADR-0008, ADR-0009 |
 | Storage | MySQL only, no bucket, no raw files | ADR-0005 |
 | Data sources | nflverse as the base; Sleeper's documented player list for injuries and depth (set aside for Phase 1) | ADR-0003, ADR-0004 |
-| Loading | Backfill 2017–2026 once, then incremental; play-by-play and depth charts current season only | ADR-0006, ADR-0013 |
+| Loading | Backfill 2022–2026 once, then incremental; play-by-play and depth charts current season only | ADR-0006, ADR-0013 |
 | Data access | Hand-written SQL with mysql2; no ORM; schema changes by hand; no transform library | ADR-0010, ADR-0011, ADR-0012 |
 | Scoring | Calculated in the app from stored stats | ADR-0007 |
 | Frontend to API | The browser calls the API directly over public HTTPS; CORS limited to the frontend's origin | ADR-0014 |
@@ -182,3 +183,11 @@ The backend and frontend are separate apps in separate repos (ADR-0008). The Gra
 - Live board latency → server-sent-event subscriptions instead of polling (ADR-0017).
 - Outside API clients → add depth, alias and cost limits alongside trusted documents (ADR-0017).
 - Projections → a separate modeling component if built.
+
+**Before the first deployment** (to consider in the deployment phase; none is needed locally):
+- Production settings: `NODE_ENV=production`; startup refuses a missing `FRONTEND_ORIGIN`; a `TRUST_PROXY` setting for the number of proxies in front of the API, without which every client shares one rate limit.
+- Response headers: HSTS, and `Cache-Control: no-store` on account data.
+- Database: connect to MySQL over TLS; give the app a user limited to its own schema (it still needs DDL there, because the pipeline creates and drops staging tables).
+- Sign-in: decide whether the token check uses `checkRevoked`, which costs a Firebase call per request, so a disabled account is refused before its token expires (up to an hour).
+- More than one backend instance: keep rate-limit counts in a shared store; in memory, each instance counts separately.
+- Dependency updates: Dependabot, which opens update pull requests on GitHub, or `npm outdated` and `npm audit` run by hand on a schedule.

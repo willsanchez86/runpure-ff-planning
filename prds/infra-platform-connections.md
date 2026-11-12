@@ -2,7 +2,7 @@
 
 **Brings every league from Sleeper, Yahoo and ESPN into one place, and tells you exactly what the app can and can't do in each one.**
 
-**Last updated:** 2026-11-09 · moved from the online PRD doc; links updated. Shared platform facts and terms: [Overview](00-overview.md).
+**Last updated:** 2026-11-12 · reviewed against ADR-0008 (no change needed). 2026-11-09: · moved from the online PRD doc; links updated. Shared platform facts and terms: [Overview](00-overview.md).
 
 ## At a glance
 

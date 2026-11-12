@@ -9,7 +9,7 @@
 |  |  |
 | --- | --- |
 | **Serves** | The weekly review: how did I do, how lucky was I, what did I leave on the bench |
-| **Viewing data** | Viewing phase. A working version already exists on sample data |
+| **Viewing data** | Viewing phase. A working version already exists on sample data: [`prototypes/ff-workbench-sample-data.html`](../prototypes/ff-workbench-sample-data.html) |
 | **Making changes** | None. This feature only reads |
 | **Depends on** | [Player explorer](feature-player-explorer.md) (its player table is the base for the team and player tables here), [Platform connections](infra-platform-connections.md) and [Data ETL & storage](infra-data-etl-and-storage.md) |
 | **Main work** | Moving the existing views onto real data, not designing new ones |

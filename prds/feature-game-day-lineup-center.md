@@ -2,7 +2,7 @@
 
 **One screen that shows every lineup problem in every league before kickoff, lets you fix it, and then follows all your matchups live.**
 
-**Last updated:** 2026-11-09 · live-tier ownership (ETL spec D15) and live-board polling (ADR-0017) aligned with decisions
+**Last updated:** 2026-11-12 · reviewed against ADR-0008 (no change needed). 2026-11-09: · live-tier ownership (ETL spec D15) and live-board polling (ADR-0017) aligned with decisions
 
 ## At a glance
 

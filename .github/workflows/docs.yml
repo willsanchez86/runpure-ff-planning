@@ -12,8 +12,17 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: 24 }
       - name: Base commit
-        run: echo "BASE=${{ github.event.pull_request.base.sha || github.event.before }}" >> "$GITHUB_ENV"
+        # Empty on a branch's first push (GitHub sends all zeros) or when the earlier commit is gone (force push)
+        run: |
+          BASE="${{ github.event.pull_request.base.sha || github.event.before }}"
+          if [ -z "$BASE" ] || ! git cat-file -e "$BASE^{commit}" 2>/dev/null; then BASE=""; fi
+          echo "BASE=$BASE" >> "$GITHUB_ENV"
       - name: Frozen ADRs unchanged
+        if: env.BASE != ''
         run: node scripts/check-adr-immutability.mjs --base "$BASE"
-      - name: Doc check
+      - name: Doc check (changes since base)
+        if: env.BASE != ''
         run: node .claude/skills/doc-check/check.mjs --base "$BASE"
+      - name: Doc check (whole repo; no earlier commit to compare)
+        if: env.BASE == ''
+        run: node .claude/skills/doc-check/check.mjs

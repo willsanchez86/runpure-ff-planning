@@ -8,7 +8,7 @@
 
 ## Context
 
-The pipeline produces app-ready tables, the ingest ledger and run lock ([ADR-0006](ADR-0006-backfill-2017-2026-once-then-load-only-data-that-can-still-change.md)), and the dated Sleeper player-list copies ([ADR-0004](ADR-0004-keep-dated-copies-of-every-sleeper-player-list-pull.md)). The app also stores user accounts and account-owned rows ([ADR-0001](ADR-0001-design-for-multiple-users-from-day-one.md)).
+The pipeline produces app-ready tables, the ingest ledger and run lock ([ADR-0006](ADR-0006-backfill-2022-2026-once-then-load-only-data-that-can-still-change.md)), and the dated Sleeper player-list copies ([ADR-0004](ADR-0004-keep-dated-copies-of-every-sleeper-player-list-pull.md)). The app also stores user accounts and account-owned rows ([ADR-0001](ADR-0001-design-for-multiple-users-from-day-one.md)).
 
 **Database engine.** The first version of this decision chose Postgres while comparing storage layouts, not engines. A comparison of the realistic engines followed:
 - **SQLite** serializes writers and fails the multi-user guardrail ([ADR-0001](ADR-0001-design-for-multiple-users-from-day-one.md)) once there is a second instance. It is not a production option.
@@ -27,7 +27,7 @@ The pipeline produces app-ready tables, the ingest ledger and run lock ([ADR-000
 **Use MySQL as the only store, with no object storage bucket: don't keep raw downloads, and keep ADR-0004's dated Sleeper player-list copies as rows in MySQL.** MySQL holds:
 
 1. The app-ready tables the API reads.
-2. The ingest ledger and the run lock from [ADR-0006](ADR-0006-backfill-2017-2026-once-then-load-only-data-that-can-still-change.md).
+2. The ingest ledger and the run lock from [ADR-0006](ADR-0006-backfill-2022-2026-once-then-load-only-data-that-can-still-change.md).
 3. User accounts and every account-owned row ([ADR-0001](ADR-0001-design-for-multiple-users-from-day-one.md)).
 4. The dated Sleeper player-list copies ([ADR-0004](ADR-0004-keep-dated-copies-of-every-sleeper-player-list-pull.md)).
 
@@ -65,7 +65,7 @@ Serializes writers, so it fails the multi-user guardrail once there is a second 
 ## Relationship to other decisions
 
 - **Changes where** [ADR-0004](ADR-0004-keep-dated-copies-of-every-sleeper-player-list-pull.md)'s dated copies are kept: in MySQL. ADR-0004's decision is unchanged.
-- **Keeps** [ADR-0006](ADR-0006-backfill-2017-2026-once-then-load-only-data-that-can-still-change.md)'s run lock and ingest ledger in MySQL.
+- **Keeps** [ADR-0006](ADR-0006-backfill-2022-2026-once-then-load-only-data-that-can-still-change.md)'s run lock and ingest ledger in MySQL.
 - **Meets** the concurrent-writer requirement of [ADR-0001](ADR-0001-design-for-multiple-users-from-day-one.md).
 - **Paired with** [ADR-0010](ADR-0010-map-database-rows-to-code-by-hand-without-an-orm.md), which decides how the code talks to MySQL.
 - **Follows from** [ADR-0012](ADR-0012-transform-pipeline-data-in-typescript-and-mysql-with-no-transform-library.md) (files are parsed and loaded directly).

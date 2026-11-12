@@ -1,9 +1,21 @@
 # Implementation Spec — Data ETL & Storage
 
-**Date:** 2026-11-09 · **Version:** v2.9 · **Status:** Draft. Every decision is recorded in §0.2; none is open.
+**Date:** 2026-11-10 · **Version:** v2.15 · **Status:** Draft. Every decision is recorded in §0.2; none is open.
 **Companion to:** the Data ETL & storage technical PRD, [`prds/infra-data-etl-and-storage.md`](../prds/infra-data-etl-and-storage.md).
 **Implements:** ADR-0001 to ADR-0013, and ADR-0017 for the operator query fields ([`design/architecture-decisions.md`](../design/architecture-decisions.md)).
 
+> **v2.15 (2026-11-10):** a download that fails partway through now fails its piece instead of leaving the run waiting forever with the run lock held (`nflverse.service.ts` uses `pipeline` instead of `pipe`, which doesn't pass stream errors on).
+>
+> **v2.14 (2026-11-10):** TypeScript pinned to 6.0 (§12). `npm install` picked up TypeScript 7.0, which typescript-eslint, used by the backend's JSDoc lint check, doesn't support yet.
+>
+> **v2.13 (2026-11-10):** local MySQL is pinned to `mysql:8.4` (owner). Docker's `mysql:lts` tag had moved to MySQL 9.7, the newer LTS line, so the first local database came up as 9.7.4 instead of the 8.4 these documents assume (§7.3, §12).
+>
+> **v2.12 (2026-11-10):** history starts in 2022, not 2017 (owner; ADR-0006, ADR-0013 and ADR-0012 revised): sizes re-measured for 2022–2026 (§4.1, §7.2.4, §7.3), backfill command updated (§5.1). The data dictionary keeps its 2017–2026 profile.
+>
+> **v2.11 (2026-11-10):** the design was validated against freshly downloaded source files (§7.2.3). Fixes: `kick_distance` is signed; which team columns carry the foreign key, and why player and game references carry none; `team` loads first and by upsert, because a foreign key blocks deleting a referenced parent row; the §8 key checks now match the rows §7.2.3 already leaves out.
+>
+> **v2.10 (2026-11-10):** the backend setup script was updated to the current decisions before its first run and moved into the planning repo ([`code-repo-kit/init-runpure-backend.ps1`](../code-repo-kit/init-runpure-backend.ps1)); it now builds the D6 switch dates, so §5.2 and §13 no longer list them as a later step.
+>
 > **v2.9 (2026-11-09):** the five appendix files merged into one data dictionary (sections A1–A10).
 >
 > **v2.8 (2026-11-09):** line-by-line review fixes: ADR-0017 added to §0.1; Workbench described as a preference (ADR-0011); stat-correction wording matched to ADR-0006; five seasonal datasets; `team` added to every fact table's "Points to" and the team foreign key reconciled with §8; ID-type rule scoped to join IDs; roster status values listed (Appendix A, section A6); PRD question references point to the PRD that now holds them; Node 24 and Express 5 cited to ADR-0017.
@@ -35,14 +47,14 @@
 | [ADR-0001](../design/decisions/ADR-0001-design-for-multiple-users-from-day-one.md) | Pipeline tables are shared reference data; account-owned rows (none in this pipeline) carry `user_id` |
 | [ADR-0003](../design/decisions/ADR-0003-use-independent-sources-with-sleeper-filling-specific-gaps.md) | nflverse is the base source; Sleeper only through its documented player list (parked, §4.3) |
 | [ADR-0004](../design/decisions/ADR-0004-keep-dated-copies-of-every-sleeper-player-list-pull.md) | Dated copies of every Sleeper player-list pull, kept in MySQL (ADR-0005). Parked with Sleeper |
-| [ADR-0006](../design/decisions/ADR-0006-backfill-2017-2026-once-then-load-only-data-that-can-still-change.md) | One-time backfill, incremental runs, ingest ledger, run lock, staging then swap (§5) |
+| [ADR-0006](../design/decisions/ADR-0006-backfill-2022-2026-once-then-load-only-data-that-can-still-change.md) | One-time backfill, incremental runs, ingest ledger, run lock, staging then swap (§5) |
 | [ADR-0007](../design/decisions/ADR-0007-calculate-fantasy-points-in-the-app-from-stored-stats.md) | No fantasy-point columns stored; the app scores from stat lines |
 | [ADR-0009](../design/decisions/ADR-0009-write-the-data-pipeline-in-typescript.md) | Pipeline written in TypeScript on Node |
 | [ADR-0010](../design/decisions/ADR-0010-map-database-rows-to-code-by-hand-without-an-orm.md) | Hand-written SQL and hand-defined column mappings; no ORM |
 | [ADR-0011](../design/decisions/ADR-0011-apply-schema-changes-by-hand-with-no-migration-tool.md) | Schema statements applied by hand (MySQL Workbench preferred), kept in order in `sql/` |
 | [ADR-0012](../design/decisions/ADR-0012-transform-pipeline-data-in-typescript-and-mysql-with-no-transform-library.md) | No transform library: files are fetched, parsed with csv-parse and mapped in TypeScript; joins in TypeScript or MySQL |
 | [ADR-0005](../design/decisions/ADR-0005-store-all-pipeline-data-in-mysql-with-no-bucket.md) | MySQL is the only store; raw downloads are not kept; a bad load is fixed by downloading again |
-| [ADR-0013](../design/decisions/ADR-0013-keep-play-by-play-and-depth-charts-for-the-current-season-only.md) | Play-by-play and depth charts: current season only; every other dataset keeps 2017–2026 |
+| [ADR-0013](../design/decisions/ADR-0013-keep-play-by-play-and-depth-charts-for-the-current-season-only.md) | Play-by-play and depth charts: current season only; every other dataset keeps 2022–2026 |
 | [ADR-0008](../design/decisions/ADR-0008-run-the-api-and-pipeline-in-a-separate-express-backend.md) | Pipeline, scheduler and backfill live in the Express backend (layered modular monolith), in its always-on process |
 | [ADR-0017](../design/decisions/ADR-0017-use-graphql-for-the-backend-api.md) | Run history and the ledger are read through the GraphQL query fields `pipelineRuns` and `ingestLedger`, for operator accounts only |
 
@@ -109,7 +121,7 @@ Rules:
 
 ## 3. Where the code lives
 
-Backend repository (`runpure-ff-backend`), created by `init-runpure-backend.ps1`:
+Backend repository (`runpure-ff-backend`), created by [`code-repo-kit/init-runpure-backend.ps1`](../code-repo-kit/init-runpure-backend.ps1) (pipeline parts shown):
 
 ```
 src/
@@ -127,7 +139,7 @@ src/
   scheduler/index.ts          schedules that only call the ingest entry point
   jobs/                       CLI entry points: ingest, backfill, headers
 sql/                          hand-applied schema statements, in order (ADR-0011)
-docker-compose.yml            local MySQL (mysql:lts)
+docker-compose.yml            local MySQL (mysql:8.4, bound to 127.0.0.1)
 ```
 
 ## 4. Sources
@@ -136,18 +148,18 @@ docker-compose.yml            local MySQL (mysql:lts)
 
 Files are fetched from `https://github.com/nflverse/nflverse-data/releases/download/<release>/<file>`. No authentication. GitHub's REST API (60 requests an hour unauthenticated, counted per IP address) is **not** used; if a job ever lists releases through the API, it needs a token.
 
-The Phase 1 datasets (D2), plus the team file (D9a), and their measured CSV sizes, 2017–2026 (2026 to date), from the release download URLs on 2026-11-06 unless noted. Weekly rosters (`weekly_rosters/`, ~146 MB) aren't loaded: no Phase 1 requirement needs them.
+The Phase 1 datasets (D2), plus the team file (D9a), and their CSV sizes for the seasons loaded, 2022–2026 (2026 to date), measured from the files downloaded on 2026-11-10 (ADR-0006). Weekly rosters (`weekly_rosters/`, ~146 MB) aren't loaded: no Phase 1 requirement needs them.
 
-| Dataset | Release path | Scope | Size 2017–2026 | Kept |
+| Dataset | Release path | Scope | Size 2022–2026 | Kept |
 |---|---|---|---|---|
-| Weekly player stats | `stats_player/stats_player_week_<season>.csv` | history | ~77 MB | 2017 onward |
-| Season rosters | `rosters/roster_<season>.csv` | history | ~10 MB | 2017 onward |
-| Weekly team stats | `stats_team/stats_team_week_<season>.csv` | history | ~2 MB (about 0.22 MB a season, measured 2026-11-08) | 2017 onward |
-| Snap counts | `snap_counts/snap_counts_<season>.csv` | history | ~22 MB | 2017 onward |
-| Injuries | `injuries/injuries_<season>.csv` | history | ~7 MB | 2017 onward |
+| Weekly player stats | `stats_player/stats_player_week_<season>.csv` | history | ~36 MB | 2022 onward |
+| Season rosters | `rosters/roster_<season>.csv` | history | ~5 MB | 2022 onward |
+| Weekly team stats | `stats_team/stats_team_week_<season>.csv` | history | ~1 MB | 2022 onward |
+| Snap counts | `snap_counts/snap_counts_<season>.csv` | history | ~10 MB | 2022 onward |
+| Injuries | `injuries/injuries_<season>.csv` | history | ~3 MB | 2022 onward |
 | Schedules and scores | `schedules/games.csv` | single file | ~2 MB | All seasons in one file |
 | Players | `players/players.csv` | single file | ~7 MB | One file |
-| Teams | `teams/teams_colors_logos.csv` | single file | ~19 KB (measured 2026-11-09 UTC) | One file (D9a) |
+| Teams | `teams/teams_colors_logos.csv` | single file | ~19 KB | One file (D9a) |
 | Depth charts | `depth_charts/depth_charts_<season>.csv` | current season | ~151 MB (71 MB for 2026 so far) | Current season only (ADR-0013) |
 | Play-by-play | `pbp/play_by_play_<season>.csv.gz` | current season | ~914 MB as CSV (94–100 MB per season) | Current season only (ADR-0013) |
 
@@ -179,7 +191,7 @@ Facts that bear on it: nflverse's injury files carry the official report status 
 
 ### 5.1 Backfill and incremental runs (ADR-0006, ADR-0013)
 
-- **Backfill (once):** `npm run backfill -- --from 2017 --to 2026`. Loads every history dataset for each season, piece by piece. It's a command, never on the scheduler. Resumable: a piece already loaded with an unchanged source version is skipped.
+- **Backfill (once):** `npm run backfill -- --from 2022 --to 2026` (ADR-0006; `HISTORY_START_SEASON=2022`). Earlier seasons can be added later with an earlier `--from`. Loads every history dataset for each season, piece by piece. It's a command, never on the scheduler. Resumable: a piece already loaded with an unchanged source version is skipped.
 - **Incremental (each scheduled run):**
   - history datasets: the current season's file only;
   - current-season datasets (pbp, depth charts): the current season's file;
@@ -198,7 +210,7 @@ Facts that bear on it: nflverse's injury files carry the official report status 
 - weekly stats, snap counts, injuries, depth charts and play-by-play: on the Wednesday after Labor Day (the 2026 opener moved to a Wednesday);
 - single-file datasets have no season.
 
-`CURRENT_SEASON` overrides the rule. The scaffold's placeholder (one switch in September) is replaced by a per-dataset switch date in `datasets.ts` and `season.ts`.
+`CURRENT_SEASON` overrides the rule. Each dataset's switch date is set in `datasets.ts` (`rollover`) and applied in `season.ts`, in the Eastern time zone.
 
 ### 5.3 Reliability
 
@@ -247,6 +259,8 @@ Each table states its grain (what one row is) before its columns ([Kimball, Decl
 | `play` | `pbp` (current season) | Fact (event) | One play | `game_id, play_id` | `game`, `team` | 372 | 70,118 (2025 + 2026) |
 | `team` | `teams/teams_colors_logos.csv` | Entity | One team code | `team_abbr` | — | 16 | 36 |
 
+Row counts above are from the 2017–2026 profile. Phase 1 loads 2022–2026 (ADR-0006), about half the rows of each seasonal table; §7.2.4 sizes that load.
+
 #### 7.2.2 Rules applied to every column
 
 | Rule | Source |
@@ -275,36 +289,49 @@ Full findings and citations behind these rules: [`research/relational-schema-bes
 - **Depth charts:** 285 dated snapshots between 2026-03-22 and 2026-11-08, so roughly daily. 3.2% of rows have no `gsis_id` (ESPN ID present), so `gsis_id` is nullable here and `player` is joined where it exists.
 - **13 play-by-play columns are empty** in both seasons profiled; their types are set from their names.
 - **Season rosters mark practice squad as status `DEV`** (*inference* from the code; per D2, a practice-squad player is included only once he has a weekly stats row).
+- **Validated against fresh downloads, 2026-11-10** (every season 2017–2026 of the five seasonal datasets, the three single files, the 2026 depth charts and play-by-play):
+  - Every file's columns are unchanged in name and order, in every season. Injuries still has two headers: 2017–2024, and 2025 on.
+  - Every observed value fits its proposed type except `kick_distance`, which had a punt of −2 yards; it is now `SMALLINT` (data dictionary, section A10).
+  - Every team code in every team column has a row in `team`, except `play.side_of_field`, which also holds `50` (midfield). It gets no foreign key.
+  - **1,501 players on season rosters (1,610 rows, mostly cut players) have no row in `players.csv`**, in every season since 2017. nflverse also dropped 130 players last active in 2012 from `players.csv` since 2026-11-08. A database-enforced foreign key to `player` would reject those roster rows and stop `player` being replaced, so player and game references are checked by the load and only warn (§8).
+  - Snap counts: 225 rows (22 Pro Football Reference IDs) don't map to `player.pfr_id`, as before. Weekly stats still have 203 rows without a player, rosters 12, and injuries 4 repeated keys.
 - **Replacing a season stays a single transaction** (delete that season's rows, insert from staging), as in §5.3. A table-rename swap can't be used for it, because MySQL commits any open transaction before a rename ([RENAME TABLE](https://dev.mysql.com/doc/refman/8.4/en/rename-table.html); [atomic DDL](https://dev.mysql.com/doc/refman/8.4/en/atomic-ddl.html)).
 
 #### 7.2.4 Estimated size
 
-*Inference:* estimated from the proposed types and profiled row counts, plus about 60% for page fill and indexes; measure after the first load.
+*Inference:* estimated from the proposed types and the row counts for the seasons loaded (2022–2026, counted 2026-11-10), plus about 60% for page fill and indexes; measure after the first load.
 
 | Table | Bytes a row (est.) | Rows | Size (est.) |
 |---|---|---|---|
-| `player_week_stat` | ~390 | ~173,000 (10 seasons) | ~115 MB |
-| `play` | ~2,060 | ~49,000 (one season) | ~165 MB |
-| `depth_chart` | ~70 | ~764,000 (2026 to date; grows through the season) | ~125 MB |
-| `snap_count` | ~80 | ~241,000 | ~45 MB |
-| `injury_report` | ~320 | ~53,000 | ~30 MB |
-| `roster` | ~310 | ~31,000 | ~15 MB |
+| `player_week_stat` | ~390 | ~85,000 (5 seasons) | ~57 MB |
+| `play` | ~2,060 | ~49,000 (one full season) | ~165 MB |
+| `depth_chart` | ~70 | ~769,000 (2026 to date; grows through the season) | ~125 MB |
+| `snap_count` | ~80 | ~119,000 | ~22 MB |
+| `injury_report` | ~320 | ~26,000 | ~15 MB |
+| `roster` | ~310 | ~16,000 | ~8 MB |
 | `player` | ~350 | ~25,000 | ~15 MB |
-| `game`, `team_week_stat`, `team` | — | ~13,000 | ~5 MB |
-| **Total** | | | **~515 MB** |
+| `game`, `team_week_stat`, `team` | — | ~10,000 | ~5 MB |
+| **Total** | | | **~410 MB** |
+
+For 2017–2026 the total was about 515 MB.
 
 The type rules hold a weekly stat row to about 390 bytes, against about 1,200 if every number were stored as `DOUBLE`.
 
-**Team table (D9a):** nflverse's `teams/teams_colors_logos.csv` is loaded as `team` (36 codes, 16 columns; Appendix A, section A4), so every team column has a foreign key to `team.team_abbr`, and screens get team names, colors and logos.
+**Team table (D9a):** nflverse's `teams/teams_colors_logos.csv` is loaded as `team` (36 codes, 16 columns; Appendix A, section A4), and screens get team names, colors and logos.
+
+**Foreign keys** (checked against real data, §7.2.3):
+- Every column that holds a team code has a database foreign key to `team.team_abbr`, except `play.side_of_field`, which also holds `50`. A code with no row in `team` therefore blocks the load (§8).
+- Player and game references (the "Points to" column above) carry no database foreign key. The load checks them and warns (§8), because real rows reference players missing from `players.csv`, and because `player` and `game` are replaced whole on each load.
+- MySQL checks a foreign key immediately and, by default, rejects deleting a parent row that child rows still reference ([MySQL 8.4, FOREIGN KEY constraints](https://dev.mysql.com/doc/refman/8.4/en/create-table-foreign-keys.html); [constraint differences](https://dev.mysql.com/doc/refman/8.4/en/ansi-diff-foreign-keys.html)). So `team` is loaded first and by upsert (insert new codes, update existing ones, delete none), not by delete-and-replace like the other single files.
 
 Each table's `CREATE TABLE` goes in a new `sql/000N_*.sql`, is run by hand (ADR-0011; Workbench preferred), and is then mapped in `datasets.ts`.
 
 ### 7.3 Database copies
 
-- **Local:** Docker's `mysql:lts` (8.4), from the backend repo's `docker-compose.yml`.
+- **Local:** Docker's `mysql:8.4` image, from the backend repo's `docker-compose.yml`, reachable only from the developer's machine (`127.0.0.1:3306`). Pinned to 8.4 by the owner on 2026-11-10: the `mysql:lts` tag now follows MySQL 9.7, and the hosting research found 8.4 offered by every host compared (`research/mysql-hosting-options-research-2026-11-08.md`).
 - **Hosted:** not chosen (open questions 1 and 4).
 - **Schema changes:** applied by hand to each copy, from the statements kept in `sql/`, in order (ADR-0011).
-- **Size:** about 300 MB of CSV for the Phase 1 datasets (D2): about 127 MB for the seven, plus about 100 MB of play-by-play and 71 MB of depth charts for the current season; about 515 MB estimated in MySQL (§7.2.4), not yet measured.
+- **Size:** about 235 MB of CSV for the Phase 1 datasets (D2): about 64 MB for the seven over 2022–2026, plus about 100 MB of play-by-play (a full season) and about 70 MB of depth charts for the current season; about 410 MB estimated in MySQL (§7.2.4), not yet measured.
 - **Backup and recovery (D16):** a deployment-phase decision, not decided now.
 
 **Decided (D13):** local MySQL only for now; the host is a deployment-phase decision, and the local image must then run the same major version as the host. Hosting research: [`research/mysql-hosting-options-research-2026-11-08.md`](../research/mysql-hosting-options-research-2026-11-08.md).
@@ -317,8 +344,8 @@ Runs inside each load, before a piece is marked `loaded` (ADR-0006).
 
 | Check | Effect |
 |---|---|
-| The file's header doesn't match the dataset's mapping | Blocks |
-| A natural key repeats, or a key column is empty | Blocks |
+| The file's header doesn't match the dataset's mapping (injuries accepts both of its headers, §7.2) | Blocks |
+| A natural key repeats, or a key column is empty, after the expected cases are handled: rows §7.2.3 leaves out (weekly stats without a player, roster rows without a player ID) are dropped and counted in `job_run`, and a repeated injury key keeps the latest report | Blocks |
 | The row count falls sharply against the same piece's last load | Blocks |
 | A player or game ID in a fact table has no row in `player` or `game` | Warns |
 | A team code has no row in `team` | Blocks: the foreign key to `team.team_abbr` (D9a) rejects the load. *Owner's decision, 2026-11-09* |
@@ -385,9 +412,9 @@ v1.1 added a `source_health` table (OK / Out of date / Broken / Reconnect needed
 
 | Part | Choice | From |
 |---|---|---|
-| Language and runtime | TypeScript on Node 24 | ADR-0009, ADR-0008; Node 24 per ADR-0017 |
+| Language and runtime | TypeScript 6.0 on Node 24. Move to 7.0 once typescript-eslint supports it (it has no compiler API yet) | ADR-0009, ADR-0008; Node 24 per ADR-0017 |
 | Server | Express 5, layered modular monolith; GraphQL Yoga endpoint | ADR-0008, ADR-0017 |
-| Database | MySQL; local `mysql:lts` (8.4) in Docker | ADR-0005 |
+| Database | MySQL 8.4; local `mysql:8.4` in Docker | ADR-0005; §7.3 |
 | Database access | `mysql2`, hand-written SQL | ADR-0010 |
 | Schema changes | Hand-applied statements in `sql/` | ADR-0011 |
 | CSV parsing | `csv-parse`, streamed | ADR-0012 |
@@ -399,13 +426,13 @@ v1.1 added a `source_health` table (OK / Out of date / Broken / Reconnect needed
 
 ## 13. Sequencing
 
-1. **Done:** backend scaffold (`init-runpure-backend.ps1`): repo, Express layers, pipeline module, ledger and lock, scheduler, backfill and headers commands, local MySQL.
-2. Apply `sql/0001_pipeline_tables.sql` by hand (ADR-0011).
+1. Run the backend setup script ([`code-repo-kit/init-runpure-backend.ps1`](../code-repo-kit/init-runpure-backend.ps1)): repo, Express layers, GraphQL endpoint with the token check, pipeline module with the D6 switch dates, ledger and lock, scheduler, backfill and headers commands, local MySQL. Then run `npm run spike`, the Yoga-on-Express-5 check that ADR-0017 makes the first build step.
+2. Apply `sql/0001_pipeline_tables.sql` and `sql/0002_users.sql` by hand (ADR-0011).
 3. Map each Phase 1 dataset (D2; tables in §7.2): `headers` → `CREATE TABLE` → mapping → `npm run ingest -- --dataset <name>`.
 4. Add the D10 checks to the load (§8).
 5. Run the backfill.
 6. Build the Player list, Player card and schedule queries on the loaded tables, as GraphQL fields (ADR-0017).
-7. Replace the scaffold's season placeholder with the D6 switch dates; confirm the 06:00 Eastern schedule (D7).
+7. Confirm the D6 switch dates and the 06:00 Eastern schedule (D7) against nflverse's publishing once the first season rolls over.
 8. Deployment phase: choose the host (D13) and backup and recovery (D16).
 
 ---

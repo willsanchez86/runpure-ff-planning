@@ -2,7 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-11-06
-**Revised:** 2026-11-08, in place, at the owner's direction (not finalized): references to ADR-0009's earlier DuckDB assumption updated; data size added. 2026-11-09: Option B's wording aligned with the sized data. 2026-11-09: **Rules out** line added for the doc check.
+**Revised:** 2026-11-08, in place, at the owner's direction (not finalized): references to ADR-0009's earlier DuckDB assumption updated; data size added. 2026-11-09: Option B's wording aligned with the sized data. 2026-11-09: **Rules out** line added for the doc check. 2026-11-10, in place, at the owner's direction (not finalized): load size updated for the 2022–2026 backfill (ADR-0006).
 **Deciders:** William Sanchez
 **Rules out:** DuckDB; transform library
 
@@ -12,7 +12,7 @@ The pipeline is written in TypeScript and runs as a scheduled job inside the bac
 
 DuckDB is an in-process analytical SQL engine, not a separate server. Used here, it would be a transform step inside the job, either in memory or as a persistent file. Similar in-process options exist for Node, and the transform can also be done with no added library.
 
-The data was sized on 2026-11-08: about 300 MB of CSV for Phase 1, an estimated 515 MB in MySQL (ETL spec §7.2.4). Fantasy points are calculated in the app from stored stats ([ADR-0007](ADR-0007-calculate-fantasy-points-in-the-app-from-stored-stats.md)), so the pipeline doesn't do the scoring itself. The transform step lives inside the job, so changing it later doesn't touch the schema or the app.
+The data was sized on 2026-11-08: about 300 MB of CSV for Phase 1, an estimated 515 MB in MySQL. With the backfill starting in 2022 (ADR-0006, revised 2026-11-10) that falls to about 235 MB of CSV and an estimated 410 MB (ETL spec §7.2.4). Fantasy points are calculated in the app from stored stats ([ADR-0007](ADR-0007-calculate-fantasy-points-in-the-app-from-stored-stats.md)), so the pipeline doesn't do the scoring itself. The transform step lives inside the job, so changing it later doesn't touch the schema or the app.
 
 ## Decision
 
@@ -46,7 +46,7 @@ A pure-JavaScript, dplyr-style table-transformation library (BSD-3). Last pushed
 **Easier:** no extra dependency or native binary in the app's container; one SQL dialect (MySQL); transforms are written the way the rest of the code is.
 **Harder / to revisit:**
 - Our TypeScript code downloads and parses the source files, and joins and aggregations are written in TypeScript or MySQL.
-- The 2017–2026 backfill ([ADR-0006](ADR-0006-backfill-2017-2026-once-then-load-only-data-that-can-still-change.md)) is the largest load: about 300 MB of CSV and an estimated 515 MB in MySQL (ETL spec §7.2.4), not yet measured.
+- The 2022–2026 backfill ([ADR-0006](ADR-0006-backfill-2022-2026-once-then-load-only-data-that-can-still-change.md)) is the largest load: about 235 MB of CSV and an estimated 410 MB in MySQL (ETL spec §7.2.4), not yet measured.
 - Revisit if the sized data or the transforms prove too heavy for TypeScript and MySQL.
 
 ## Relationship to other decisions

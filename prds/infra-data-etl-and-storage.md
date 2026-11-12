@@ -2,7 +2,7 @@
 
 **Loads nflverse's NFL data into MySQL tables that the Phase 1 screens read, keeps them current, and can rebuild every table from the source with one command.**
 
-**Last updated:** 2026-11-09 · Technical PRD, draft v2.1 · Owner: William Sanchez · v2.1: moved from the online PRD doc; run history exposed through GraphQL (ADR-0017).
+**Last updated:** 2026-11-10 · Technical PRD, draft v2.2 · Owner: William Sanchez · v2.2: history starts in 2022 (ADR-0006, owner, 2026-11-10); build order matches the updated backend setup script. v2.1: moved from the online PRD doc; run history exposed through GraphQL (ADR-0017).
 
 Its implementation spec is [`specs/ff-data-etl-storage-spec.md`](../specs/ff-data-etl-storage-spec.md), and the decisions behind it are ADR-0001 to ADR-0013 ([decision log](../design/architecture-decisions.md)). The API that reads its tables is GraphQL ([ADR-0017](../design/decisions/ADR-0017-use-graphql-for-the-backend-api.md)).
 
@@ -26,7 +26,7 @@ If this layer is wrong, every screen above it is silently wrong. It also has to 
 
 **In scope (Phase 1)**
 
-- Seven nflverse datasets for 2017–2026: weekly player stats, weekly team stats, schedules, players, season rosters, injuries and snap counts, plus nflverse's team file for team names, colors and logos
+- Seven nflverse datasets for 2022–2026: weekly player stats, weekly team stats, schedules, players, season rosters, injuries and snap counts, plus nflverse's team file for team names, colors and logos
 - Play-by-play and depth charts for the current season only (ADR-0013); play-by-play is kept to enable analytics later
 - Kickers, team defenses and individual defensive players; practice-squad players only once they play (a weekly stats row)
 - A one-time backfill, then scheduled runs that load only data that can still change (ADR-0006)
@@ -55,7 +55,7 @@ If this layer is wrong, every screen above it is silently wrong. It also has to 
 
 | Goal | Target |
 | --- | --- |
-| Full backfill, 2017–2026, with one command | Completes; resumes where it stopped; every piece recorded in the ledger |
+| Full backfill, 2022–2026, with one command | Completes; resumes where it stopped; every piece recorded in the ledger |
 | Scheduled runs | Load only the current season's files and the single-file datasets; unchanged files are skipped |
 | Freshness | Player list and stats no more than 24 hours old in season |
 | Safe re-runs | Loading the same piece twice gives identical tables; a run killed midway leaves the previous data intact |
@@ -76,7 +76,7 @@ If this layer is wrong, every screen above it is silently wrong. It also has to 
 
 ## User stories
 
-- As the operator, I want one command that loads 2017–2026, so the tables are complete before the screens are built.
+- As the operator, I want one command that loads 2022–2026, so the tables are complete before the screens are built.
 - As the operator, I want each day's run to load only what changed, so runs stay short and never duplicate rows.
 - As the operator, I want each run's outcome and each file's load recorded, so I can see what loaded, what was skipped and what failed.
 - As the owner, I want the player list and stats no more than 24 hours old in season, so the Phase 1 screens are current.
@@ -86,7 +86,7 @@ If this layer is wrong, every screen above it is silently wrong. It also has to 
 | Requirement | Done when |
 | --- | --- |
 | Every Phase 1 dataset loaded into its table (spec §7.2) | For each dataset: header read, table created, columns mapped, first load passes |
-| Backfill command | `npm run backfill -- --from 2017 --to 2026` loads every piece; a stopped backfill resumes |
+| Backfill command | `npm run backfill -- --from 2022 --to 2026` loads every piece; a stopped backfill resumes |
 | Scheduled runs inside the Express backend's always-on process (ADR-0008) | Each run loads the current season's files and the single files; a file whose published version hasn't changed is skipped |
 | Ledger, lock and run history | One ledger row per dataset × season; a run that finds the lock taken exits and records the skip; every run is recorded |
 | Staging, then swap | A piece's rows are replaced in one transaction; a crash leaves the live table untouched |
@@ -159,8 +159,8 @@ The "Ref" column: D labels are the implementation spec's §0.2 decisions; Q labe
 
 The implementation spec's sequencing, [`specs/ff-data-etl-storage-spec.md`](../specs/ff-data-etl-storage-spec.md) §13:
 
-1. Apply the bookkeeping tables (`sql/0001_pipeline_tables.sql`)
+1. Run the backend setup script and the Yoga-on-Express-5 check, then apply the bookkeeping and users tables (`sql/0001_pipeline_tables.sql`, `sql/0002_users.sql`)
 2. Map each Phase 1 dataset: header, `CREATE TABLE`, mapping, first load
 3. Add the checks that block or warn on a load
 4. Run the backfill
-5. Replace the scaffold's season placeholder with the D6 switch dates; confirm the 06:00 Eastern schedule
+5. Confirm the D6 switch dates and the 06:00 Eastern schedule

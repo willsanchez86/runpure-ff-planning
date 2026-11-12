@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fantasy Workbench — Players &amp; NFL (Phase 1 prototype)</title>
+<meta name="description" content="Phase 1 prototype of Runpure FF Fantasy Workbench: every NFL player and every game from daily public data. Sample data only.">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+<a href="#view" class="skip">Skip to content</a>
+
+<!-- Signed-out sign-in screen mounts here (hidden while signed in) -->
+<div id="signin-root" style="display:none"></div>
+
+<!-- App shell: left nav + topbar + routed view -->
+<div class="app" id="app" style="display:none">
+  <nav class="nav" id="nav" aria-label="Primary"></nav>
+  <main>
+    <header class="topbar" id="topbar"></header>
+    <section id="view" tabindex="-1"></section>
+  </main>
+</div>
+
+<div class="tip" id="tip" role="status" aria-live="polite"></div>
+
+<script src="data.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
