@@ -1,9 +1,11 @@
 # Implementation Spec — Data ETL & Storage
 
-**Date:** 2026-11-12 · **Version:** v2.16 · **Status:** Draft. Every decision is recorded in §0.2; none is open.
+**Date:** 2026-11-12 · **Version:** v2.17 · **Status:** Draft. Every decision is recorded in §0.2; none is open.
 **Companion to:** the Data ETL & storage technical PRD, [`prds/infra-data-etl-and-storage.md`](../prds/infra-data-etl-and-storage.md).
 **Implements:** ADR-0001 to ADR-0013, and ADR-0017 for the operator query fields ([`design/architecture-decisions.md`](../design/architecture-decisions.md)).
 
+> **v2.17 (2026-11-12):** Claude's corrections and hardening while implementing the load path and backfill, validated against freshly fetched files and a real load into an isolated MySQL schema. (1) Only primary-key columns are `NOT NULL`; every other column is nullable, because the data dictionary's 0.0%-empty figures are a single snapshot that live data violates (e.g. `player.height`/`weight`, several `play` clock/result columns). The load drops rows whose key is empty (§8). (2) `roster.draft_club` carries no foreign key: nflverse uses a different team-code vocabulary there (`AZ` for Arizona vs `team_abbr` `ARI`), so it can't reference `team` (§7.2.4). (3) Transport hardening (§4.2): the downloader follows redirects by hand with an https host allowlist (SSRF), bounds time-to-headers and inter-chunk idle (not a whole-download deadline), and caps download and gzip-decompressed bytes (bomb guard); `RELEASE_BASE` is now an environment variable (§4.1). (4) Staging is a session-scoped `TEMPORARY` table discarded when its connection closes, and an errored load destroys its connection (§5.3).
+>
 > **v2.16 (2026-11-12):** Claude's corrections while writing the data-table `CREATE TABLE` files, validated against freshly fetched files (data dictionary A3, A7). Schedules' `pfr` game id is typed `VARCHAR(16) ascii`, matching snap counts' `pfr_game_id` (both are ASCII). The injuries dictionary note now states that the file ships two 16-column headers (2017–2024 with `date_modified`, 2025+ with `season_type` second), so the 17-column table is their union, both columns are nullable, and injuries is mapped and validated by column name (§7.2.3, §8 already describe the two headers).
 >
 > **v2.15 (2026-11-10):** a download that fails partway through now fails its piece instead of leaving the run waiting forever with the run lock held (`nflverse.service.ts` uses `pipeline` instead of `pipe`, which doesn't pass stream errors on).
@@ -107,7 +109,7 @@ Also agreed (2026-11-06), not separate ADRs:
   hand-written column mapping (TypeScript)  ── drops fantasy-point columns (ADR-0007)
         │  batched INSERTs
         ▼
-  MySQL  <table>__staging  ──►  one transaction: delete rows being replaced, copy staging in
+  MySQL  <table>__staging (session TEMPORARY)  ──►  one transaction: delete rows being replaced, copy staging in
         │
         ▼
   MySQL app tables  ◄── Express API: GraphQL endpoint (Yoga) → resolvers → services → models
@@ -148,7 +150,7 @@ docker-compose.yml            local MySQL (mysql:8.4, bound to 127.0.0.1)
 
 ### 4.1 nflverse
 
-Files are fetched from `https://github.com/nflverse/nflverse-data/releases/download/<release>/<file>`. No authentication. GitHub's REST API (60 requests an hour unauthenticated, counted per IP address) is **not** used; if a job ever lists releases through the API, it needs a token.
+Files are fetched from `${RELEASE_BASE}/<release>/<file>`, where `RELEASE_BASE` is an environment variable defaulting to `https://github.com/nflverse/nflverse-data/releases/download` (so a mirror needs no redeploy; §12). No authentication. GitHub's REST API (60 requests an hour unauthenticated, counted per IP address) is **not** used; if a job ever lists releases through the API, it needs a token.
 
 The Phase 1 datasets (D2), plus the team file (D9a), and their CSV sizes for the seasons loaded, 2022–2026 (2026 to date), measured from the files downloaded on 2026-11-10 (ADR-0006). Weekly rosters (`weekly_rosters/`, ~146 MB) aren't loaded: no Phase 1 requirement needs them.
 
@@ -178,7 +180,7 @@ The Phase 1 datasets (D2), plus the team file (D9a), and their CSV sizes for the
 
 ### 4.2 Verify at build
 
-- **Version headers.** Incremental runs skip a file whose published version is unchanged (ADR-0006). The scaffold reads `ETag` and `Last-Modified` from a HEAD request that follows GitHub's redirect. This wasn't confirmed: the download host failed during checking on 2026-11-08. If neither header is returned, compare `Content-Length` plus a content hash recorded in the ledger.
+- **Version headers.** Incremental runs skip a file whose published version is unchanged (ADR-0006). The pipeline reads `ETag` and `Last-Modified` from the final response of a HEAD request; confirmed 2026-11-12 that GitHub redirects release assets to `release-assets.githubusercontent.com`, which returns an `ETag`. Redirects are followed **by hand** and every hop (including the start URL) is validated against an https host allowlist (`RELEASE_HOST_ALLOWLIST`), not auto-followed; the download has a response-header timeout, an inter-chunk idle timeout, and download and gzip-decompression byte caps (SSRF and resource-exhaustion guards; §12). If no `ETag` is returned, compare `Content-Length` plus a content hash recorded in the ledger.
 - **Team codes.** v1.3 required normalizing relocated teams (OAK→LV, SD→LAC, STL→LA) before any join. nflverse's team file keeps the old codes as their own rows (OAK, SD, STL, plus both LA and LAR), so every code joins to `team` as published. Check during mapping whether a screen needs them shown under the current team.
 
 ### 4.3 Sleeper player list (parked)
@@ -216,7 +218,7 @@ Facts that bear on it: nflverse's injury files carry the official report status 
 
 ### 5.3 Reliability
 
-- **One piece at a time:** rows stream into `<table>__staging` in batches (default 1,000 rows); then one transaction deletes the rows being replaced (that season, or the whole table) and copies staging in. A crash before the swap leaves the live table untouched; the next run drops the leftover staging table.
+- **One piece at a time:** rows stream into a session-scoped `<table>__staging` `TEMPORARY` table in batches (default 1,000 rows); then one transaction deletes the rows being replaced (that season, or the whole table) and copies staging in. A crash before the swap leaves the live table untouched; the `TEMPORARY` staging is discarded when its connection closes, and an errored load destroys its connection, so no staging table lingers for a later run.
 - **Ledger:** each piece is recorded in `ingest_ledger` with its source URL, version headers, status (`downloading`, `loaded`, `failed`), row count and error. A failed piece is retried on the next run.
 - **Run record:** each run writes a `job_run` row (kind, start, end, outcome, pieces loaded, skipped and failed). The GraphQL query fields `pipelineRuns` and `ingestLedger` expose them to operator accounts (ADR-0017).
 - **No overlap:** each run takes the MySQL named lock `runpure_pipeline_run` (`GET_LOCK`, no wait). A run that can't get it records `skipped_locked` and exits. Backfill and scheduled runs share the lock.
@@ -274,7 +276,7 @@ Row counts above are from the 2017–2026 profile. Phase 1 loads 2022–2026 (AD
 | Every player-ID column used for joins (GSIS and PFR IDs) has one identical type, `VARCHAR(10) CHARACTER SET ascii COLLATE ascii_bin`, so joins use the index; other providers' IDs keep the length the data needs; every team-code column is `VARCHAR(4)` ascii, matching `team.team_abbr`; names stay `utf8mb4` with the default accent- and case-insensitive collation | [how MySQL uses indexes](https://dev.mysql.com/doc/refman/8.4/en/mysql-indexes.html); [server character set and collation](https://dev.mysql.com/doc/refman/8.4/en/charset-server.html) |
 | `DATE` for dates; `DATETIME` (or `DATETIME(3)` where the source has milliseconds) in UTC for timestamps; never `TIMESTAMP`, which ends in 2038; game-clock values (`mm:ss`) as short strings, with the numeric seconds columns used for arithmetic | [date and time types](https://dev.mysql.com/doc/refman/8.4/en/datetime.html) |
 | `ENUM` only for small closed sets (`season_type`, `game_type`, `location`, `team_conf`); team and position stay codes | [ENUM type](https://dev.mysql.com/doc/refman/8.4/en/enum.html) |
-| Key columns `NOT NULL`; a stat that doesn't apply stays `NULL`, never 0; strict SQL mode on | [optimizing data size](https://dev.mysql.com/doc/refman/8.4/en/data-size.html); [Kimball Design Tip #43](https://www.kimballgroup.com/2003/02/design-tip-43-dealing-with-nulls-in-the-dimensional-model/) |
+| Only primary-key columns are `NOT NULL` (the profile's 0.0%-empty is a snapshot live data violates); every other column is nullable, and a stat that doesn't apply stays `NULL`, never 0; strict SQL mode on | [optimizing data size](https://dev.mysql.com/doc/refman/8.4/en/data-size.html); [Kimball Design Tip #43](https://www.kimballgroup.com/2003/02/design-tip-43-dealing-with-nulls-in-the-dimensional-model/) |
 | Wide tables stay as typed columns, not JSON; long text (the play description, up to 717 characters) is `TEXT` | [column count and row size limits](https://dev.mysql.com/doc/refman/8.4/en/column-count-limit.html); [JSON type](https://dev.mysql.com/doc/refman/8.4/en/json.html) |
 | Column names kept exactly as nflverse spells them (snake_case) | [SQL Style Guide](https://www.sqlstyle.guide/) |
 
@@ -322,7 +324,7 @@ The type rules hold a weekly stat row to about 390 bytes, against about 1,200 if
 **Team table (D9a):** nflverse's `teams/teams_colors_logos.csv` is loaded as `team` (36 codes, 16 columns; Appendix A, section A4), and screens get team names, colors and logos.
 
 **Foreign keys** (checked against real data, §7.2.3):
-- Every column that holds a team code has a database foreign key to `team.team_abbr`, except `play.side_of_field`, which also holds `50`. A code with no row in `team` therefore blocks the load (§8).
+- Every column that holds a team code has a database foreign key to `team.team_abbr`, except `play.side_of_field` (which also holds `50`) and `roster.draft_club` (which uses a different nflverse vocabulary, e.g. `AZ` for Arizona vs `ARI`, confirmed against the live 2026 file). A code with no row in `team` otherwise blocks the load (§8).
 - Player and game references (the "Points to" column above) carry no database foreign key. The load checks them and warns (§8), because real rows reference players missing from `players.csv`, and because `player` and `game` are replaced whole on each load.
 - MySQL checks a foreign key immediately and, by default, rejects deleting a parent row that child rows still reference ([MySQL 8.4, FOREIGN KEY constraints](https://dev.mysql.com/doc/refman/8.4/en/create-table-foreign-keys.html); [constraint differences](https://dev.mysql.com/doc/refman/8.4/en/ansi-diff-foreign-keys.html)). So `team` is loaded first and by upsert (insert new codes, update existing ones, delete none), not by delete-and-replace like the other single files.
 
