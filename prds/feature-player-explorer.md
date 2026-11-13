@@ -2,7 +2,7 @@
 
 **Every NFL player in one table you can sort, filter and configure, with no league needed. It's the first feature to build (after Data ETL & storage), and the base for every other player table in the app.**
 
-**Last updated:** 2026-11-09 · sign-in requirement (ADR-0015), game-night stats timing (ETL spec D7) and per-account settings (ADR-0001) aligned with decisions
+**Last updated:** 2026-11-12 · range switch set to the full season or a custom range of weeks; player-detail scope expanded under Should have soon. Earlier (2026-11-09): sign-in requirement (ADR-0015), game-night stats timing (ETL spec D7) and per-account settings (ADR-0001) aligned with decisions
 
 ## At a glance
 
@@ -48,7 +48,7 @@ And until a league is connected, the app has nothing to show.
 - As the owner, I want to filter by position, NFL team, injury status and bye week, so I can narrow the list quickly.
 - As the owner, I want to search by name, so I can jump straight to a player.
 - As the owner, I want to switch between full point per reception, half point and standard scoring, so the numbers match how I play.
-- As the owner, I want to choose which columns appear and over what range (season, last 5 games, last 3 games), so I see what matters to me.
+- As the owner, I want to choose which columns appear and over what range (the full season, or a custom range of weeks), so I see what matters to me.
 - As the owner, I want to open a player and see his week-by-week numbers, so I understand how his points were made.
 
 **When something's different**
@@ -67,7 +67,7 @@ And until a league is connected, the app has nothing to show.
 | **Filters**: position (including a combined running back, receiver and tight end option), NFL team, injury status, bye week, minimum games played | Filters combine. The number of matching players is always shown. One "Clear all" resets them |
 | **Name search** | Finds partial names and ignores capitals and accents |
 | **Scoring switch**: full point per reception, half point, standard, plus tight end premium and 6-point passing touchdowns | Every number on the page updates together |
-| **Range switch**: season, last 5 games, last 3 games | Applies to averages, totals, highs, lows and volatility |
+| **Range switch**: the full season, or a custom range of weeks (for example weeks 4–9) | Applies to averages, totals, highs, lows and volatility. Fixed last-5 and last-3 windows were removed (owner, 2026-11-12) as they don't match how the list is used |
 | **Column chooser**: total points, points per game, last 3 games, high, low, volatility, games played, snap share, target share, next opponent and its difficulty, bye week, weekly trend line | Turning a column on or off doesn't reset the sort or filters |
 | **Player detail** | Clicking a player shows his stats and points for each week |
 | **Remembered settings** | Reopening the app restores sort, filters, columns, range and scoring. Stored per user account, not in the browser only ([ADR-0001](../design/decisions/ADR-0001-design-for-multiple-users-from-day-one.md); system design §0, row 1) |
@@ -77,7 +77,9 @@ And until a league is connected, the app has nothing to show.
 | Requirement | Done when |
 | --- | --- |
 | **Saved views**: name a combination of filters, sort and columns, such as "Waiver running backs" | One click restores it |
-| **Compare from the list**: tick up to four players and open them in the comparison chart | The chart opens with those players already loaded |
+| **Compare from the list**: tick up to four players and open them side by side; keep several player profiles open as tabs | The comparison opens with those players loaded; each tab holds one profile |
+| **Expanded player profile**: the player detail opens as a profile with a game log (the position's stat line, fantasy points, snap share, final score and win/loss, byes and missed weeks as gaps, and upcoming weeks shown with their matchup difficulty), plus splits, usage and advanced-stat trends, a consistency view, position rank over time, and a season-by-season career table | Each view follows the scoring and range controls; a season selector covers 2022 to the current season ([ADR-0006](../design/decisions/ADR-0006-backfill-2022-2026-once-then-load-only-data-that-can-still-change.md)) |
+| **Grouped columns, view presets and advanced columns** (air-yards share, usage, efficiency), configured in a columns-and-filters panel | Choosing a preset or toggling columns keeps the sort and filters |
 | **Next week's projection** as a column, after Phase 1 | Uses the projection definition on the [Overview](00-overview.md) |
 | **Download the current view** as a spreadsheet file | Opens correctly in Excel and Google Sheets |
 

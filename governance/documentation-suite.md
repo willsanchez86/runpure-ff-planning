@@ -1,6 +1,6 @@
 # Documentation Suite — Runpure FF
 
-**Last updated:** 2026-11-09
+**Last updated:** 2026-11-12
 **Purpose:** which planning documents exist, what each is for, where it lives, and how it changes. Blank structures for each are in [`governance/templates.md`](templates.md). Background research: [`research/minimal-planning-document-suite-research-2026-11-05.md`](../research/minimal-planning-document-suite-research-2026-11-05.md).
 
 ---
@@ -39,6 +39,7 @@ The project owner (William Sanchez) is the only approver. Claude may draft and p
 |---|---|---|---|
 | **PRDs** (Overview; feature PRDs; technical PRDs for infrastructure) | What is built and why; scope; acceptance; open product questions | `prds/` | [`governance/templates.md`](templates.md) §2 |
 | **System design** (the SADD) | How the parts fit together; boundaries; data flow; how the multi-user guardrail is met | [`design/system-design.md`](../design/system-design.md) | §3 |
+| **Interface design brief & design language** | The design direction — how the product should look, behave and flow (screens, interactions, states) — and the visual system any screen consumes: design tokens, colour, type, spacing, accessibility | [`design/interface-design-brief.md`](../design/interface-design-brief.md), [`design/design-language.md`](../design/design-language.md), [`design/tokens.css`](../design/tokens.css) | — |
 | **ADRs** and the decision log | One architectural decision each, with options and consequences; the log indexes them and holds open questions | `design/decisions/`, [`design/architecture-decisions.md`](../design/architecture-decisions.md) | §1 |
 | **Implementation specs** | How one piece is built: sources, schema, jobs, sequencing | `specs/` (the ETL spec now; one per other PRD, written just before that piece is built) | — (follows the ETL spec's shape) |
 | **Master Test & Deployment Plan** (MTDP) | Acceptance matrix, CI/CD, rollback | `design/mtdp.md`; not written yet, required before the first hosted deploy | §4 |
@@ -69,6 +70,7 @@ The project owner (William Sanchez) is the only approver. Claude may draft and p
 |---|---|---|---|
 | PRDs | Project owner | Per feature cycle | `prds/` |
 | System design | Project owner | With every ADR that changes it | [`design/system-design.md`](../design/system-design.md) |
+| Interface design brief & design language | Project owner | When the design changes, or the PRD it serves changes | `design/` (`interface-design-brief.md`, `design-language.md`, `tokens.css`) |
 | ADRs and decision log | Project owner | Per decision | `design/decisions/`, [`design/architecture-decisions.md`](../design/architecture-decisions.md) |
 | Implementation specs | Project owner | Per change to that piece | `specs/` |
 | MTDP | Project owner | Per release | `design/mtdp.md` (not yet written) |

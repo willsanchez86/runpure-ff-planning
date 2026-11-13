@@ -10,6 +10,7 @@ Every planning document for Runpure FF (Fantasy Workbench): PRDs, system design,
 | [`design/system-design.md`](design/system-design.md) | How the parts fit together; points to the ADR behind every choice |
 | [`design/architecture-decisions.md`](design/architecture-decisions.md) | Decision log: every ADR with its status, plus open questions |
 | `design/decisions/` | One file per architecture decision (ADR-0001 to ADR-0017) |
+| [`design/interface-design-brief.md`](design/interface-design-brief.md), [`design/design-language.md`](design/design-language.md), [`design/tokens.css`](design/tokens.css) | The design direction (how it should look, behave and flow) and the visual system: design tokens, colour, type, accessibility |
 | [`governance/documentation-suite.md`](governance/documentation-suite.md) | Which documents exist, where they live, and how they change |
 | [`governance/templates.md`](governance/templates.md) | Templates for ADRs, PRDs, the system design and the test & deployment plan; ADR rules and lifecycle |
 | `design/reviews/` | Dated records of decision reviews (the 2026-11-08 open-decisions review) |

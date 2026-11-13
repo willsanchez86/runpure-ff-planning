@@ -12,7 +12,12 @@
 
 /* ---- deterministic RNG so the prototype looks identical every load ---- */
 function mulberry(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
-const R=mulberry(20261110);
+/* R delegates to a swappable stream so lazy per-player history can be generated
+   from an independent, id+year-seeded stream without perturbing the eager build. */
+let _rng=mulberry(20261110);
+const R=()=>_rng();
+function withSeed(seed,fn){const prev=_rng;_rng=mulberry((seed>>>0)||1);try{return fn()}finally{_rng=prev}}
+function hash2(a,b){let h=(2166136261^(a>>>0))>>>0;h=Math.imul(h,16777619)>>>0;h=(h^(b>>>0))>>>0;h=Math.imul(h,16777619)>>>0;return h>>>0;}
 const randn=()=>{let u=0,v=0;while(!u)u=R();while(!v)v=R();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)};
 const N=(m,s)=>m+s*randn();
 const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
@@ -103,6 +108,8 @@ function bio(pos){
   const [hl,hh]=HT[pos]||[72,76],[wl,wh]=WT[pos]||[210,240],[jl,jh]=JER[pos]||[1,99];
   const yrs=Math.max(0,Math.round(clamp(N(4,3),0,15)));
   const inches=Math.round(N((hl+hh)/2,1.4));
+  const _round=yrs===0?0:(R()<.12?0:1+Math.floor(R()*7));          // 0 => undrafted
+  const _pickInRound=_round?1+Math.floor(R()*32):0;                // slot within round
   return{
     age:clamp(21+yrs+Math.round(N(0,1)),21,39),
     ht:clamp(inches,hl-1,hh+1),
@@ -111,7 +118,8 @@ function bio(pos){
     college:pick(COLLEGES),
     exp:yrs,
     draftYear:SEASON-yrs,
-    draftRound:yrs===0?0:(R()<.12?0:1+Math.floor(R()*7)),  // 0 => undrafted
+    draftRound:_round,
+    draftPick:_round?((_round-1)*32+_pickInRound):0,      // overall pick; 0 => undrafted
   };
 }
 
@@ -129,6 +137,26 @@ function genLine(p,opp){
     case"LB":{s.solo=pois(5.6*t);s.ast=pois(3.0);s.sk=pois(.42*t);s.int=pois(.09*t);s.pd=pois(.5*t);s.ff=pois(.11);s.fr=pois(.07);s.td=R()<.01?1:0;s.snap=clamp(Math.round(N(78,12)),35,100);break;}
     case"DL":{s.solo=pois(2.8*t);s.ast=pois(1.9);s.sk=pois(.62*t);s.tfl=pois(.8*t);s.qbh=pois(1.1*t);s.int=0;s.pd=pois(.2);s.ff=pois(.10);s.fr=pois(.06);s.td=R()<.005?1:0;s.snap=clamp(Math.round(N(66,13)),25,100);break;}
   }
+  /* ---- advanced / usage fields (semantically present in the ETL) ---- */
+  if(p.pos==="WR"||p.pos==="TE"){
+    s.tgtsh=clamp(N(.12+.16*p.role,.03),.02,.42);          // target share (frac of team targets)
+    s.aysh=clamp(s.tgtsh*N(1.12,.16)+(p.role>.6?.03:0),.01,.5); // air-yards share
+    s.wopr=Math.round((1.5*s.tgtsh+.7*s.aysh)*100)/100;    // WOPR-style usage
+    s.fd=binom(s.rec||0,.5)+(s.ctd||0);                    // first downs
+    s.fuml=binom(s.fum||0,.5);                             // fumbles lost
+  } else if(p.pos==="RB"){
+    s.tgtsh=clamp(N(.04+.09*(p.recv||1)*p.role,.02),0,.3);
+    s.aysh=clamp(s.tgtsh*N(.5,.12),0,.2);
+    s.wopr=Math.round((1.5*s.tgtsh+.7*s.aysh)*100)/100;
+    s.fd=binom(s.car||0,.22)+binom(s.rec||0,.4);
+    s.fuml=binom(s.fum||0,.5);
+  } else if(p.pos==="QB"){
+    s.fd=binom(s.att||0,.33)+binom(s.car||0,.3);
+    s.snap=clamp(Math.round(N(99,1.4)),90,100);
+    s.sk=pois(2.1);                                        // sacks taken
+    s.skyd=s.sk*Math.max(3,Math.round(N(6.5,2)));          // sack yards lost
+    s.fuml=binom(s.fum||0,.5);
+  }
   return s;
 }
 
@@ -142,7 +170,7 @@ function mk(pos,team,role,recv,mob){
     headshotHue:Math.floor(R()*360),
     weeks:{},prior:[],status:null,practice:null,depth:0,
     ...b};
-  if(pos==="DEF"){p.age=null;p.ht=null;p.wt=null;p.jersey=null;p.college=null;p.exp=null;p.draftYear=null;p.draftRound=null;}
+  if(pos==="DEF"){p.age=null;p.ht=null;p.wt=null;p.jersey=null;p.college=null;p.exp=null;p.draftYear=null;p.draftRound=null;p.draftPick=null;}
   PLAYERS.push(p);return p;
 }
 TEAMS.forEach(t=>{
@@ -246,12 +274,92 @@ for(let w=1;w<=SEASON_WEEKS;w++){
   SCHEDULE[w]={games,byes:ABBRS.filter(t=>BYE[t]===w)};
 }
 
+/* =======================================================================
+   Multi-season layer (2022–2026). Context on every weekly line + a LAZY,
+   deterministic prior-season generator seeded by (player id, year) so the
+   initial page load stays fast and the full history builds only when a card
+   opens. The CURRENT season (p.weeks) is eager; priors are cached on demand.
+   ======================================================================= */
+const MONTHS=["Sep","Sep","Sep","Sep","Oct","Oct","Oct","Oct","Nov","Nov","Nov","Nov","Dec","Dec","Dec","Dec","Jan","Jan"];
+function restDays(){const r=R();return r<.08?4:r<.14?10:r<.17?13:7;}   // Thu short / bye-return long
+function envFromStadium(st){
+  let temp,wind;
+  if(st.roof==="dome"){temp="Controlled (dome)";wind="—";}
+  else if(st.roof==="retractable"){const closed=R()<.5;temp=closed?"Controlled (roof closed)":Math.round(N(66,8))+"°F";wind=closed?"—":Math.max(0,Math.round(N(6,4)))+" mph";}
+  else{temp=Math.round(N(54,15))+"°F";wind=Math.max(0,Math.round(N(9,5)))+" mph";}
+  return{roof:st.roof,surface:st.surface,temp,wind};
+}
+
+/* attach context to the eager current-season lines (home/away + venue from the
+   actual scheduled game, month, division flag, rest days) */
+const GAMEAT={};
+for(let w=1;w<=SEASON_WEEKS;w++){GAMEAT[w]={};SCHEDULE[w].games.forEach(g=>{GAMEAT[w][g.home]=g;GAMEAT[w][g.away]=g;});}
+PLAYERS.forEach(p=>{for(const w of WEEKS){const line=p.weeks[w];if(!line||line==="BYE")continue;
+  const g=GAMEAT[w][p.team],o=OPP[w][p.team];
+  line.week=w;line.team=p.team;line.opp=o;line.home=g?g.home===p.team:true;
+  line.roof=g?g.roof:TEAM[p.team].roof;line.surface=g?g.surface:TEAM[p.team].surface;
+  line.temp=g?g.temp:"—";line.wind=g?g.wind:"—";
+  line.month=MONTHS[w-1];line.div=o?TEAM[p.team].div===TEAM[o].div:false;line.rest=restDays();
+}});
+
+/* position population sizes (for deterministic prior-season rank mapping) */
+const POS_COUNT={};PLAYERS.forEach(p=>POS_COUNT[p.pos]=(POS_COUNT[p.pos]||0)+1);
+
+/* gentle aging curve, peak ~26 */
+function agingFactor(age){if(age==null)return 1;const d=age-26;return clamp(1-.012*Math.abs(d)-(d>0?.006*d:0),.7,1.05);}
+
+/* build one prior season deterministically (called inside withSeed) */
+function buildPriorSeason(p,year){
+  const weeks={},yearsBack=SEASON-year;
+  const entryYear=SEASON-(p.exp||0);
+  if(p.pos!=="DEF"&&year<entryYear)return{year,weeks,notInLeague:true,entryYear};
+  // free agency: older seasons may have been played for a different team
+  let baseTeam=p.team;
+  if(p.pos!=="DEF"&&yearsBack>=1&&R()<.18*yearsBack)baseTeam=pick(ABBRS);
+  const ageNow=p.age!=null?p.age:27, ageThen=ageNow-yearsBack;
+  const seasonTalent=clamp(p.talent*agingFactor(ageThen)/agingFactor(ageNow)*N(1,.05),.5,1.6);
+  const sp={...p,talent:seasonTalent};
+  const bye=5+Math.floor(R()*10);
+  const miss=new Set();
+  if(p.pos!=="DEF"&&R()<.22){const st=1+Math.floor(R()*14),len=1+Math.floor(R()*4);for(let w=st;w<st+len;w++)miss.add(w);}
+  // mid-season trade: weeks after tradeWeek were played for tradeTeam
+  let tradeWeek=null,tradeTeam=null;
+  if(p.pos!=="DEF"&&R()<.10){tradeWeek=5+Math.floor(R()*9);tradeTeam=pick(ABBRS.filter(t=>t!==baseTeam));}
+  for(let w=1;w<=SEASON_WEEKS;w++){
+    if(w===bye){weeks[w]="BYE";continue;}
+    if(miss.has(w)){weeks[w]=null;continue;}
+    const team=(tradeWeek&&w>=tradeWeek)?tradeTeam:baseTeam;
+    const opp=pick(ABBRS.filter(t=>t!==team));
+    const line=genLine({...sp,team},opp);
+    const home=R()<.5, host=TEAM[home?team:opp], env=envFromStadium(host);
+    line.week=w;line.team=team;line.opp=opp;line.home=home;
+    line.roof=env.roof;line.surface=env.surface;line.temp=env.temp;line.wind=env.wind;
+    line.month=MONTHS[w-1];line.div=TEAM[team].div===TEAM[opp].div;line.rest=restDays();
+    weeks[w]=line;
+  }
+  // deterministic position rank that season from a scoring-independent production percentile
+  const pct=clamp(.5+.5*((seasonTalent*(p.role||1))-1)/.5+N(0,.08),.02,.995);
+  const n=POS_COUNT[p.pos]||48, rank=Math.max(1,Math.min(n,Math.round((1-pct)*n)));
+  return{year,weeks,seasonTeam:baseTeam,tradeWeek,tradeTeam,bye,rank,partial:false};
+}
+
+/* lazy accessor + cache. year===SEASON returns the eager current season. */
+function ensureSeason(p,year){
+  (p.seasons||(p.seasons={}));
+  if(p.seasons[year])return p.seasons[year];
+  let res;
+  if(year===SEASON){res={year,weeks:p.weeks,seasonTeam:p.team,bye:BYE[p.team],current:true,partial:true};}
+  else res=withSeed(hash2(p.id+1,year),()=>buildPriorSeason(p,year));
+  return(p.seasons[year]=res);
+}
+const SEASONS=[SEASON-4,SEASON-3,SEASON-2,SEASON-1,SEASON];   // 2022..2026
+
 /* phase label for the week picker */
 function weekPhase(w){return w<=SEASON_WEEKS?"reg":"post";}
 
 /* ---- expose ---- */
-window.FFW={TEAMS,TEAM,ABBRS,PLAYERS,WEEKS,PLAYED,CUR,SEASON,SEASON_WEEKS,OPP,BYE,SCHEDULE,weekPhase,
-  OFF,DEFQ,DST_STR,
+window.FFW={TEAMS,TEAM,ABBRS,PLAYERS,WEEKS,PLAYED,CUR,SEASON,SEASON_WEEKS,SEASONS,OPP,BYE,SCHEDULE,weekPhase,
+  OFF,DEFQ,DST_STR,ensureSeason,MONTHS,POS_COUNT,
   // last-updated timestamps for the freshness note (prototype "today" = 2026-11-10)
   lastUpdated:new Date("2026-11-10T06:00:00-05:00"),
   staleUpdated:new Date("2026-11-08T05:58:00-05:00")};
