@@ -136,14 +136,39 @@ select:hover{border-color:var(--line-2)}
 .linkbtn{background:none;border:0;color:var(--accent-2);cursor:pointer;font-weight:600;font-size:12.5px;padding:4px 2px}
 .linkbtn:hover{text-decoration:underline}
 
-/* -------------------------------------------------- filter bar (chips) */
-.filterbar{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;margin-bottom:12px;
-  padding:10px 12px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r)}
-.filterbar .f{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-2)}
-.filterbar .f label{color:var(--muted);font-size:11.5px}
-.filterbar select{padding:5px 8px;font-size:12.5px}
-.filterbar .spacer{margin-left:auto}
-.filterbar input[type=number]{width:56px;background:var(--panel-2);border:1px solid var(--line);
+/* ---------------------------------------- minimalist 2-row control strip */
+.toolbar.striprow1{align-items:center}
+.search.wide{flex:1;min-width:200px}
+.search.wide input{width:100%}
+.striprow1 .swi select{padding:6px 9px;font-size:12.5px}
+.resultline{display:flex;align-items:center;gap:12px;margin:2px 0 10px}
+.resultline .count{color:var(--text-2);font-size:12.5px}
+.cfbadge{display:inline-grid;place-items:center;min-width:16px;height:16px;padding:0 4px;border-radius:8px;
+  background:var(--accent);color:#fff;font-size:10.5px;font-weight:700}
+
+/* strip dropdowns (Scoring ▾ / Range ▾ / ⋯) — button + menu */
+.ddwrap{position:relative;display:inline-block}
+.ddbtn .ddlab{color:var(--muted);font-weight:600;margin-right:2px}
+.ddbtn .ddcaret{color:var(--muted);font-size:10px;margin-left:2px}
+.ddbtn.icononly{padding:7px 8px}
+.ddwrap.open .ddbtn{border-color:var(--line-2);color:var(--text)}
+.ddpanel{display:none;position:absolute;z-index:40;top:calc(100% + 6px);left:0;min-width:210px;
+  background:var(--panel-2);border:1px solid var(--line-2);border-radius:10px;padding:7px;box-shadow:var(--shadow-pop)}
+.ddpanel.right{left:auto;right:0}
+.ddwrap.open .ddpanel{display:block}
+.ddpanel .ddsec{font-size:10.5px;letter-spacing:.04em;color:var(--muted);font-weight:700;padding:4px 7px 3px;text-transform:uppercase}
+.ddpanel .ddsep{height:1px;background:var(--line);margin:6px 2px}
+.ddopt{display:flex;align-items:center;gap:9px;width:100%;text-align:left;border:0;background:none;color:var(--text-2);
+  padding:7px 9px;border-radius:7px;cursor:pointer;font-size:13px;font-weight:500}
+.ddopt:hover{background:var(--panel-3);color:var(--text)}
+.ddopt.on{color:var(--text)}
+.ddopt .rdot{width:12px;height:12px;border-radius:50%;border:1.5px solid var(--line-2);flex:none}
+.ddopt.on .rdot{border-color:var(--accent);background:radial-gradient(circle,var(--accent) 0 3.5px,transparent 4px)}
+.ddopt.soondim{cursor:not-allowed;color:var(--muted)}
+.ddchk{display:flex;align-items:center;gap:8px;padding:6px 9px;font-size:13px;color:var(--text-2);cursor:pointer}
+.ddchk input{accent-color:var(--accent);width:15px;height:15px}
+.ddcustom{display:flex;align-items:center;gap:6px;padding:4px 9px}
+.ddcustom input[type=number]{width:52px;background:var(--panel);border:1px solid var(--line);
   border-radius:7px;padding:5px 7px;font-size:12.5px;font-variant-numeric:tabular-nums}
 
 /* ------------------------------------------------------------ column chooser */
@@ -390,3 +415,275 @@ table.t{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
   .summary{grid-template-columns:repeat(2,1fr)}
   .pc-hero .av{width:52px;height:52px;font-size:19px}
 }
+
+/* ==========================================================================
+   Phase-1 expansion: research surface (list toggles) + Sleeper-spine card
+   Extends the tokens above — no new visual language.
+   ========================================================================== */
+
+/* news chip (Sleeper-style). color always paired with a text/aria label */
+.newschip{width:9px;height:14px;border-radius:3px;flex:none;display:inline-block;
+  border:1px solid var(--line-2);background:var(--panel-3);cursor:help}
+.newschip.unread{background:var(--accent);border-color:var(--accent-line);
+  box-shadow:0 0 0 2px var(--accent-soft)}
+.newschip.none{opacity:.5}
+.pcell .newschip{margin-right:2px}
+.pc-top .newschip{width:10px;height:15px}
+
+/* split-pair + tier cells in the table */
+.splitpair{display:inline-flex;gap:12px;justify-content:flex-start}
+.splitpair .sp{display:inline-flex;flex-direction:column;line-height:1.2}
+.splitpair .spl{font-size:10px;color:var(--muted)}
+.tier{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--text-2)}
+.tier i{width:8px;height:8px;border-radius:2px;display:inline-block}
+.tier.t1 i{background:var(--good)} .tier.t2 i{background:var(--accent)}
+.tier.t3 i{background:var(--te)} .tier.t4 i{background:var(--serious)} .tier.t5 i{background:var(--muted)}
+
+.summary.small .cell .v{font-size:16px}
+
+
+/* consistency strip markers */
+.cmk{stroke-width:1.5}
+.cmk.floor{stroke:var(--serious)} .cmk.med{stroke:var(--text-2)} .cmk.ceil{stroke:var(--good)}
+.cmk.thr{stroke:var(--accent-2);stroke-dasharray:3 3}
+.cfacts{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;font-size:12px;color:var(--text-2);
+  padding:6px 2px 2px}
+.cfacts b{font-size:15px;color:var(--text)}
+
+/* usage small multiples */
+.usagegrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}
+.usagepanel{margin:0;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px 4px}
+.usagepanel figcaption{font-size:11.5px;color:var(--text-2);font-weight:600;margin-bottom:2px}
+
+/* splits grid */
+.splitgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:10px}
+.splitcat{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px}
+.splitcat .sct{font-size:11.5px;color:var(--muted);font-weight:600;margin-bottom:8px}
+.splitrow{display:grid;grid-template-columns:86px 1fr 40px 30px;align-items:center;gap:8px;margin-bottom:5px}
+.splitrow .sl{font-size:12px;color:var(--text-2)}
+.splitrow .strack{height:9px;background:var(--panel-3);border-radius:3px;overflow:hidden}
+.splitrow .sfill{display:block;height:100%;background:var(--accent);border-radius:3px}
+.splitrow .sv{text-align:right;font-size:12px}
+.splitrow .sg{font-size:10.5px;text-align:right}
+
+/* matchup-difficulty chip + game-log row tags */
+.ease{display:inline-flex;align-items:center;gap:5px;color:var(--text-2);font-size:12px}
+.ease i{width:7px;height:7px;border-radius:50%;flex:none;display:inline-block}
+.tradetag{font-size:10px;font-weight:700;color:var(--te);border:1px solid var(--warn-soft);
+  border-radius:4px;padding:0 4px;background:var(--warn-soft)}
+.partialtag{font-size:9.5px;font-weight:700;color:var(--muted);border:1px solid var(--line-2);border-radius:4px;padding:0 4px}
+.partialrow td{background:rgba(57,135,229,.05)}
+
+/* projections stub */
+.projstub{padding:12px 14px;opacity:.72}
+.projstub .projrow{display:flex;align-items:center;justify-content:space-between;
+  padding:6px 0;border-bottom:1px solid var(--line)}
+.projstub .projrow:last-of-type{border-bottom:0}
+
+/* ==========================================================================
+   Fidelity pass: borrow Sleeper's LAYOUT (single-scroll modal + research table
+   anatomy) in OUR palette/type. No Sleeper teal, logos or branding.
+   ========================================================================== */
+
+/* ---- list: Stats|Projection toggle, position pills, dropdowns, availability ---- */
+.seg .soondim,.chk.soondim{opacity:.55}
+.seg button.soondim{cursor:not-allowed}
+.pillrow{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.pill{border:1px solid var(--line);background:var(--panel-2);color:var(--text-2);border-radius:999px;
+  padding:6px 13px;font-size:12.5px;font-weight:600;cursor:pointer;white-space:nowrap}
+.pill:hover{color:var(--text);border-color:var(--line-2)}
+.pill.on{background:var(--accent-soft);color:var(--text);border-color:var(--accent-line);box-shadow:inset 0 0 0 1px var(--accent-line)}
+.morewrap{position:relative;display:inline-block}
+.morewrap .menu{display:none;position:absolute;z-index:40;top:calc(100% + 6px);left:0;min-width:180px;
+  background:var(--panel-2);border:1px solid var(--line-2);border-radius:10px;padding:6px;box-shadow:var(--shadow-pop)}
+.morewrap.open .menu{display:block}
+.morewrap .menu button{display:block;width:100%;text-align:left;border:0;background:none;color:var(--text-2);
+  padding:7px 9px;border-radius:7px;cursor:pointer;font-size:13px;font-weight:600}
+.morewrap .menu button:hover{background:var(--panel-3);color:var(--text)}
+.morewrap .menu button.on{color:var(--accent-2)}
+.swi{display:inline-flex;align-items:center;gap:6px;font-size:12px}
+.search .kbd{position:absolute;right:8px;top:50%;transform:translateY(-50%);pointer-events:none;
+  font-size:10.5px;color:var(--muted);border:1px solid var(--line-2);border-radius:5px;padding:1px 5px;
+  background:var(--panel-3);font-variant-numeric:tabular-nums}
+.search input{padding-right:58px}
+.btn.iconbtn2 svg{width:15px;height:15px;opacity:.85}
+
+/* row anatomy: +Add / star / subline kickoff / inline injury word */
+.pcell .addsm,.pcell .starsm{width:20px;height:20px;border-radius:6px;flex:none;border:1px solid var(--line);
+  background:var(--panel-2);color:var(--muted);font-size:13px;line-height:1;cursor:not-allowed;padding:0}
+.pcell .addsm{color:var(--good);font-weight:800}
+.pcell .starsm{color:var(--te)}
+.pcell .kick{color:var(--muted)}
+.injword{display:inline-flex;align-items:center;font-size:9.5px;font-weight:800;padding:1px 5px;border-radius:4px;
+  margin-left:6px;border:1px solid;vertical-align:middle;letter-spacing:.02em}
+.injword.Q{color:var(--warn);border-color:var(--warn-soft);background:var(--warn-soft)}
+.injword.O{color:var(--serious);border-color:var(--serious-soft);background:var(--serious-soft)}
+.injword.IR{color:var(--crit);border-color:var(--crit-soft);background:var(--crit-soft)}
+
+/* two-level grouped stat headers (list + heat log) */
+.t thead tr.grouprow th{position:static;text-align:center;font-size:10px;letter-spacing:.06em;color:var(--muted);
+  font-weight:700;padding:6px var(--pad) 3px;border-bottom:1px solid var(--line);background:var(--panel)}
+.t thead tr.grouprow th.grp{border-left:1px solid var(--line)}
+.t thead tr.grouprow th.blank{color:transparent;border-left:0}
+.t thead tr:not(.grouprow) th{top:0}
+
+/* ---- centered single-scroll player modal ---- */
+.scrim.centered{justify-content:center;align-items:flex-start;padding:3vh 12px}
+.pcard.sleeper{width:min(1060px,96vw);height:auto;max-height:94vh;border:1px solid var(--line-2);
+  border-left:1px solid var(--line-2);border-radius:14px;margin:auto;animation:popin .18s ease}
+@keyframes popin{from{transform:scale(.985);opacity:.5}to{transform:none;opacity:1}}
+@media (prefers-reduced-motion:reduce){.pcard.sleeper{animation:none}}
+.pcard.sleeper .pc-top b{font-size:15px}
+
+/* hero */
+.pc-hero2{position:relative;display:flex;align-items:center;gap:16px;padding:16px 4px 14px;overflow:hidden;
+  background:linear-gradient(90deg,color-mix(in srgb,var(--pc) 16%,transparent),transparent 52%)}
+.pc-hero2 .av.big{width:72px;height:72px;border-radius:16px;flex:none;display:grid;place-items:center;
+  font-size:26px;font-weight:700;color:#0b0e13}
+.pc-hero2 .pc-hid{display:flex;align-items:center;gap:12px;flex:1;min-width:0}
+.pc-hero2 .pc-nm{min-width:0}
+.pc-hero2 h2{font-size:26px;letter-spacing:-.01em;line-height:1.1}
+.pc-hero2 .pc-sub{display:flex;align-items:center;gap:8px;margin-top:6px}
+.pc-hero2 .pc-acts{margin-left:auto;display:flex;gap:8px;align-items:center}
+.iconbtn{width:34px;height:34px;border-radius:9px;border:1px solid var(--line);background:var(--panel-2);
+  color:var(--te);font-size:16px;cursor:not-allowed}
+.addbtn{background:var(--good-soft);border-color:var(--good-soft);color:var(--good);font-weight:800}
+
+/* bio strip */
+.biostrip{display:flex;flex-wrap:wrap;gap:8px 26px;padding:12px 6px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);margin-top:4px}
+.biostrip .bi{display:flex;flex-direction:column;gap:2px}
+.biostrip .bl{font-size:10px;letter-spacing:.06em;color:var(--muted);font-weight:700}
+.biostrip .bv{font-size:13.5px;color:var(--text);font-weight:600}
+
+/* rankings strip (4 big stats) */
+.rankstrip{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line);
+  border:1px solid var(--line);border-radius:var(--r);overflow:hidden;margin:14px 0}
+.rankstrip .rk{background:var(--panel);padding:13px 12px;text-align:center}
+.rankstrip .rk.stub{cursor:help}
+.rankstrip .rv{font-size:21px;font-weight:800;letter-spacing:-.01em;font-variant-numeric:tabular-nums}
+.rankstrip .rl{font-size:10px;letter-spacing:.05em;color:var(--muted);margin-top:4px;font-weight:700}
+
+/* sticky in-modal section nav */
+.secnav{position:sticky;top:0;z-index:5;display:flex;gap:4px;padding:8px 0;background:var(--bg);
+  border-bottom:1px solid var(--line);margin-bottom:6px;flex-wrap:wrap}
+.secnav-b{border:1px solid transparent;background:var(--panel-2);color:var(--text-2);border-radius:8px;
+  padding:6px 12px;font-size:12.5px;font-weight:600;cursor:pointer}
+.secnav-b:hover{color:var(--text)}
+.secnav-b.on{background:var(--accent-soft);color:var(--text);border-color:var(--accent-line)}
+
+/* modal grid: main column + news rail */
+.pc-grid{display:grid;grid-template-columns:1fr 300px;gap:18px;align-items:start}
+.pc-main{min-width:0}
+.pc-rail{display:flex;flex-direction:column;gap:12px;position:sticky;top:52px}
+@media (max-width:820px){.pc-grid{grid-template-columns:1fr}.pc-rail{position:static}}
+.newscard{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.newscard .nh{font-size:12px;font-weight:700;color:var(--text-2);padding:10px 12px;
+  border-bottom:1px solid var(--line);display:flex;align-items:center;gap:8px}
+.newscard .nbody{padding:11px 12px}
+.newscard .ntitle{font-weight:600;font-size:13.5px;line-height:1.3}
+.newscard .nmeta{font-size:11.5px;color:var(--muted);margin:5px 0 8px}
+.newscard .nanalysis{font-size:12.5px;color:var(--text-2);line-height:1.55;margin:0}
+
+/* ---- heat-mapped grouped game log (Sleeper signature) ---- */
+.heatwrap{overflow:hidden}
+.heatlog{font-size:12px}
+.heatlog thead th{position:static;background:var(--panel)}
+.heatlog thead tr.grouprow th{font-size:9.5px}
+.heatlog td{text-align:right;padding:0 9px;height:30px}
+.heatlog td.l{text-align:left}
+.heatlog td.fpts{font-weight:700}
+.heatlog th.fpts{color:var(--text-2)}
+.heatlog td.projcell,.heatlog th.projcol{color:var(--muted);font-style:italic}
+.heatlog .grp{border-left:1px solid var(--line)}
+.heatnote{font-size:11px;color:var(--text-2);padding:8px 12px;border-top:1px solid var(--line);line-height:1.5}
+.heatlog td .gap{color:var(--muted)}
+/* RESULT column: W/L letter (text) + final score; colour is a redundant cue */
+.heatlog td.res{white-space:nowrap}
+.wl{font-weight:800;font-size:11px;border-radius:3px;padding:0 4px;border:1px solid}
+.wl.W{color:var(--good);border-color:var(--good-soft);background:var(--good-soft)}
+.wl.L{color:var(--crit);border-color:var(--crit-soft);background:var(--crit-soft)}
+.wl.T{color:var(--muted);border-color:var(--line);background:var(--panel-3)}
+.otm{font-size:9px;color:var(--warn);font-weight:700;border:1px solid var(--warn-soft);border-radius:3px;padding:0 3px}
+/* upcoming (unplayed) weeks — SAME game-log component, blank stats, light cue only */
+.heatlog tr.uprow td{background:rgba(57,135,229,.045);color:var(--text-2)}
+.heatlog tr.uprow td.wk{border-left:2px solid var(--accent-line)}
+.heatlog tr.uprow .ease i{width:7px;height:7px;border-radius:50%;display:inline-block}
+.heatlog tr.uprow .upcell{text-align:right}
+.upflag{font-size:9px;font-weight:700;color:var(--accent-2);border:1px solid var(--accent-line);border-radius:4px;padding:0 4px;margin-left:4px}
+
+/* season pills (game log) */
+.pills{display:inline-flex;gap:5px}
+.pills .pill{padding:4px 11px;font-size:12px}
+
+/* ==========================================================================
+   Three player modals: multi-player tabs · Compare · Columns & filters.
+   All reuse the .scrim + role="dialog" shell + ESC/click-outside/close pattern.
+   ========================================================================== */
+
+/* ---- multi-player tabs in the detail-modal header ---- */
+.pc-tabstrip{display:flex;gap:6px;align-items:center;overflow-x:auto;max-width:72%;scrollbar-width:thin}
+.scoringnote{font-size:12px}
+.ptab{display:inline-flex;align-items:center;gap:2px;border:1px solid var(--line);background:var(--panel-2);
+  border-radius:8px;flex:none;overflow:hidden}
+.ptab.on{border-color:var(--accent-line);background:var(--accent-soft)}
+.ptab .ptab-sel{display:inline-flex;align-items:center;gap:6px;border:0;background:none;color:var(--text-2);
+  font-size:12.5px;font-weight:600;cursor:pointer;padding:6px 4px 6px 9px;white-space:nowrap}
+.ptab.on .ptab-sel{color:var(--text)}
+.ptab .ptab-sel .pos{min-width:26px;height:16px;font-size:9.5px}
+.ptab .ptab-x{border:0;background:none;color:var(--muted);cursor:pointer;font-size:14px;line-height:1;
+  padding:4px 7px 4px 2px}
+.ptab .ptab-x:hover{color:var(--text)}
+
+/* ---- shared modal sizing (Compare, Columns) ---- */
+.pcard.comparemodal,.pcard.colmodal{width:min(980px,96vw);height:auto;max-height:94vh;
+  border:1px solid var(--line-2);border-radius:14px;margin:auto;animation:popin .18s ease}
+@media (prefers-reduced-motion:reduce){.pcard.comparemodal,.pcard.colmodal{animation:none}}
+.modalbody{padding:16px 18px}
+
+/* ---- Compare modal ---- */
+.cmptable{width:100%;border-collapse:collapse}
+.cmptable th,.cmptable td{border-bottom:1px solid var(--line);padding:8px 12px;text-align:right;white-space:nowrap}
+.cmptable th.l,.cmptable td.l{text-align:left}
+.cmptable thead th{position:sticky;top:0;background:var(--panel);z-index:2;vertical-align:bottom}
+.cmptable tbody td{height:34px}
+.cmptable tbody tr:hover td{background:rgba(255,255,255,.022)}
+.cmpchip{display:flex;align-items:center;gap:8px;text-align:left}
+.cmpchip .av{width:30px;height:30px;border-radius:50%;flex:none;display:grid;place-items:center;font-size:11px;font-weight:700;color:#0b0e13}
+.cmpchip .ci{min-width:0}
+.cmpchip .cn{font-weight:700;font-size:13px;color:var(--text)}
+.cmpchip .cn:hover{color:var(--accent-2);text-decoration:underline}
+.cmpchip .cs{font-size:11px}
+.cmpchip .cmprm{margin-left:4px;border:1px solid var(--line);background:var(--panel-2);color:var(--text-2);
+  width:20px;height:20px;border-radius:50%;cursor:pointer;font-size:12px;line-height:1;flex:none}
+.cmpchip .cmprm:hover{color:var(--text);border-color:var(--line-2)}
+.cmptable td.lead{background:var(--good-soft)}
+.bestmark{font-size:9.5px;font-weight:700;color:var(--good);border:1px solid var(--good-soft);
+  border-radius:4px;padding:0 4px;margin-left:5px;vertical-align:middle}
+.cmptable tr.cmpspark td{height:38px}
+.cmptable tr.cmpsec td{background:var(--panel-2);color:var(--muted);font-size:11px;font-weight:600;
+  letter-spacing:.04em;text-transform:uppercase;height:28px}
+.cmpfoot{display:flex;align-items:center;gap:12px;margin-top:12px;font-size:12px}
+
+/* ---- Columns & filters modal ---- */
+.cfgrid{display:grid;grid-template-columns:260px 1fr;gap:20px;align-items:start}
+@media (max-width:720px){.cfgrid{grid-template-columns:1fr}}
+.cfgrid h3{font-size:13px;color:var(--text-2);margin-bottom:10px}
+.cffilters{display:flex;flex-direction:column;gap:10px}
+.cff{display:flex;flex-direction:column;gap:4px}
+.cff label{font-size:11.5px;color:var(--muted)}
+.cff.check{flex-direction:row}
+.cff select,.cff input[type=number]{padding:6px 8px;font-size:12.5px;width:100%}
+.cff .cfwk{display:inline-flex;align-items:center;gap:6px}
+.cff .cfwk input{width:56px}
+.cfcat{margin-bottom:14px}
+.cfcat .cft{font-size:11px;letter-spacing:.05em;color:var(--muted);font-weight:700;margin-bottom:6px;
+  border-bottom:1px solid var(--line);padding-bottom:4px}
+.cfcols{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:4px 12px}
+.cfcol{display:flex;align-items:center;gap:7px;font-size:12.5px;color:var(--text-2);padding:4px 2px;cursor:pointer}
+.cfcol input{accent-color:var(--accent)}
+.cfview{margin-bottom:14px}
+.cfview .cft{font-size:11px;letter-spacing:.05em;color:var(--muted);font-weight:700;margin-bottom:6px}
+.cfviewrow{display:flex;flex-wrap:wrap;gap:6px}
+.cfdisplay{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.cfdisplay .cft{font-size:11px;letter-spacing:.05em;color:var(--muted);font-weight:700;margin-bottom:8px}
+.cfactions{display:flex;align-items:center;gap:10px;margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
