@@ -1,0 +1,69 @@
+/* Fantasy Workbench — design tokens (source of truth for the visual system)
+ *
+ * These custom properties are the canonical values behind design-language.md.
+ * They were distilled from the Phase 1 prototype (prototypes/phase1/styles.css)
+ * and are the dark, locked palette from the interface design brief.
+ * Position and status colours must ALWAYS be paired with a text label in the UI
+ * (colour is never the only cue — WCAG 2.2 AA).
+ */
+:root {
+  color-scheme: dark;
+
+  /* ---- base surfaces ---- */
+  --bg: #0e1117;            /* app background */
+  --panel: #161a22;         /* primary panel */
+  --panel-2: #1c212b;       /* raised panel / control */
+  --panel-3: #232937;       /* highest raised surface */
+  --line: #2a3140;          /* hairline / divider */
+  --line-2: #343c4d;        /* stronger border */
+
+  /* ---- text ---- */
+  --text: #eef0f4;          /* primary text */
+  --text-2: #aab1be;        /* secondary text */
+  --muted: #727b8a;         /* captions, hints, disabled */
+
+  /* ---- accent ---- */
+  --accent: #3987e5;        /* primary accent / links / active */
+  --accent-2: #5598e7;      /* accent hover */
+  --accent-soft: rgba(57,135,229,.16);
+  --accent-line: rgba(57,135,229,.5);
+
+  /* ---- position colours (always paired with a text label) ---- */
+  --qb: #3987e5;
+  --rb: #d95926;
+  --wr: #199e70;
+  --te: #c98500;
+  --k:  #9085e9;
+  --def: #d55181;
+  --idp: #7c8aa5;           /* DB / DL / LB share one slate family */
+
+  /* ---- status colours: good / warning / serious / critical ---- */
+  --good: #2fae5f;
+  --warn: #e3a92b;
+  --serious: #e07a4b;
+  --crit: #e0514e;
+  --good-soft: rgba(47,174,95,.14);
+  --warn-soft: rgba(227,169,43,.14);
+  --serious-soft: rgba(224,122,75,.15);
+  --crit-soft: rgba(224,81,78,.15);
+
+  /* ---- data-viz heatmap endpoints (magnitude shading; see design-language.md) ---- */
+  --heat-good: 47,174,95;   /* production (green), used as rgba(var(--heat-good), a) */
+  --heat-bad: 213,81,81;    /* negative plays: INT, fumbles, sacks taken, points allowed */
+
+  /* ---- geometry ---- */
+  --row: 38px;              /* dense table row height */
+  --pad: 12px;
+  --r: 10px;                /* panel radius */
+  --r-sm: 7px;              /* control radius */
+  --shadow-pop: 0 12px 34px rgba(0,0,0,.5);  /* reserved for floating elements only */
+
+  /* ---- typography ---- */
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  /* numeric columns use font-variant-numeric: tabular-nums and are right-aligned */
+  --fs-hero: 23px;          /* player name / page hero */
+  --fs-h: 14px;             /* section headings */
+  --fs-body: 13px;          /* body / table cells */
+  --fs-bio: 12.5px;         /* dense secondary data */
+  --fs-hint: 11.5px;        /* hints, captions, labels */
+}
