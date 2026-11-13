@@ -109,7 +109,7 @@ Also agreed (2026-11-06), not separate ADRs:
   hand-written column mapping (TypeScript)  ── drops fantasy-point columns (ADR-0007)
         │  batched INSERTs
         ▼
-  MySQL  <table>__staging  ──►  one transaction: delete rows being replaced, copy staging in
+  MySQL  <table>__staging (session TEMPORARY)  ──►  one transaction: delete rows being replaced, copy staging in
         │
         ▼
   MySQL app tables  ◄── Express API: GraphQL endpoint (Yoga) → resolvers → services → models
@@ -150,7 +150,7 @@ docker-compose.yml            local MySQL (mysql:8.4, bound to 127.0.0.1)
 
 ### 4.1 nflverse
 
-Files are fetched from `https://github.com/nflverse/nflverse-data/releases/download/<release>/<file>`. No authentication. GitHub's REST API (60 requests an hour unauthenticated, counted per IP address) is **not** used; if a job ever lists releases through the API, it needs a token.
+Files are fetched from `${RELEASE_BASE}/<release>/<file>`, where `RELEASE_BASE` is an environment variable defaulting to `https://github.com/nflverse/nflverse-data/releases/download` (so a mirror needs no redeploy; §12). No authentication. GitHub's REST API (60 requests an hour unauthenticated, counted per IP address) is **not** used; if a job ever lists releases through the API, it needs a token.
 
 The Phase 1 datasets (D2), plus the team file (D9a), and their CSV sizes for the seasons loaded, 2022–2026 (2026 to date), measured from the files downloaded on 2026-11-10 (ADR-0006). Weekly rosters (`weekly_rosters/`, ~146 MB) aren't loaded: no Phase 1 requirement needs them.
 
@@ -180,7 +180,7 @@ The Phase 1 datasets (D2), plus the team file (D9a), and their CSV sizes for the
 
 ### 4.2 Verify at build
 
-- **Version headers.** Incremental runs skip a file whose published version is unchanged (ADR-0006). The scaffold reads `ETag` and `Last-Modified` from a HEAD request that follows GitHub's redirect. This wasn't confirmed: the download host failed during checking on 2026-11-08. If neither header is returned, compare `Content-Length` plus a content hash recorded in the ledger.
+- **Version headers.** Incremental runs skip a file whose published version is unchanged (ADR-0006). The pipeline reads `ETag` and `Last-Modified` from the final response of a HEAD request; confirmed 2026-11-12 that GitHub redirects release assets to `release-assets.githubusercontent.com`, which returns an `ETag`. Redirects are followed **by hand** and every hop (including the start URL) is validated against an https host allowlist (`RELEASE_HOST_ALLOWLIST`), not auto-followed; the download has a response-header timeout, an inter-chunk idle timeout, and download and gzip-decompression byte caps (SSRF and resource-exhaustion guards; §12). If no `ETag` is returned, compare `Content-Length` plus a content hash recorded in the ledger.
 - **Team codes.** v1.3 required normalizing relocated teams (OAK→LV, SD→LAC, STL→LA) before any join. nflverse's team file keeps the old codes as their own rows (OAK, SD, STL, plus both LA and LAR), so every code joins to `team` as published. Check during mapping whether a screen needs them shown under the current team.
 
 ### 4.3 Sleeper player list (parked)
@@ -218,7 +218,7 @@ Facts that bear on it: nflverse's injury files carry the official report status 
 
 ### 5.3 Reliability
 
-- **One piece at a time:** rows stream into `<table>__staging` in batches (default 1,000 rows); then one transaction deletes the rows being replaced (that season, or the whole table) and copies staging in. A crash before the swap leaves the live table untouched; the next run drops the leftover staging table.
+- **One piece at a time:** rows stream into a session-scoped `<table>__staging` `TEMPORARY` table in batches (default 1,000 rows); then one transaction deletes the rows being replaced (that season, or the whole table) and copies staging in. A crash before the swap leaves the live table untouched; the `TEMPORARY` staging is discarded when its connection closes, and an errored load destroys its connection, so no staging table lingers for a later run.
 - **Ledger:** each piece is recorded in `ingest_ledger` with its source URL, version headers, status (`downloading`, `loaded`, `failed`), row count and error. A failed piece is retried on the next run.
 - **Run record:** each run writes a `job_run` row (kind, start, end, outcome, pieces loaded, skipped and failed). The GraphQL query fields `pipelineRuns` and `ingestLedger` expose them to operator accounts (ADR-0017).
 - **No overlap:** each run takes the MySQL named lock `runpure_pipeline_run` (`GET_LOCK`, no wait). A run that can't get it records `skipped_locked` and exits. Backfill and scheduled runs share the lock.
