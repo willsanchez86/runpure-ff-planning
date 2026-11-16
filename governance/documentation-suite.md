@@ -1,6 +1,6 @@
 # Documentation Suite — Runpure FF
 
-**Last updated:** 2026-11-12
+**Last updated:** 2026-11-15
 **Purpose:** which planning documents exist, what each is for, where it lives, and how it changes. Blank structures for each are in [`governance/templates.md`](templates.md). Background research: [`research/minimal-planning-document-suite-research-2026-11-05.md`](../research/minimal-planning-document-suite-research-2026-11-05.md).
 
 ---
@@ -30,6 +30,10 @@ The project owner (William Sanchez) is the only approver. Claude may draft and p
 - Before an ADR's implementation starts, it is revised in place: a replacing decision is merged into it, the replacing ADR is deleted, later ADRs are renumbered, and cross-references are updated.
 - Once implementation has started (the ADR's **Implementation started** line is set), the ADR is never edited except for its status line. A changed decision then gets a new ADR that supersedes the old one. The pre-commit hook enforces this.
 - Downstream documents (PRDs, system design, specs) are updated in the same change as the ADR that affects them. `node .claude/skills/doc-check/check.mjs` checks the mechanical links; the `doc-check` skill reviews content against accepted ADRs.
+
+### 2.3 The Prototype Rule
+- A prototype is a design exploration, not a decision record. When a decision is made or discovered while building one (a control added, a feature cut, a definition changed), reconcile it back into the PRDs, the interface design brief and any spec it affects in the same change — the way an ADR change propagates (§2.2).
+- The prototype is never left as a silent newer source of truth. If the owner directed the change, record it as decided; if it is Claude's refinement, it stays Proposed until the owner accepts it (AGENTS.md rule 1).
 
 ---
 

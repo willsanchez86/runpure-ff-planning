@@ -3,7 +3,7 @@
 1. Record as Accepted only what the owner decided. Your own recommendations stay Proposed or in chat.
 2. An ADR with an **Implementation started** line is frozen except its status line. A changed decision is a new ADR.
 3. An ADR without that line is revised in place (`adr-supersede` skill, Path A).
-4. When an ADR changes, update every PRD, design doc and spec that mentions it in the same change.
+4. When an ADR changes, update every PRD, design doc and spec that mentions it in the same change. The reverse also holds: when a decision is made or discovered while building a prototype (or any downstream artifact), reconcile it back into the PRDs, design brief and specs it affects in the same change — a prototype is never a silent newer source of truth.
 5. Run `node .claude/skills/doc-check/check.mjs` and fix every error before you finish.
 6. Never commit with `--no-verify`. Never push to `main`; open a pull request.
 

@@ -2,7 +2,7 @@
 
 **The design direction for the three Phase 1 screens, inside an app shell with room for the league features that follow. The bridge between the PRDs (what and why) and the build.**
 
-**Last updated:** 2026-11-12 · open questions resolved (devices, accessibility, visual language); player-detail scope expanded and recorded in [`../prds/feature-player-explorer.md`](../prds/feature-player-explorer.md). Original brief dated 2026-11-10.
+**Last updated:** 2026-11-15 · reconciled to the Phase 1 prototype: card described as tabbed sections (not single-scroll); combined IDP filter, per-game/totals toggle and Rookies filter added to the Player-list controls; expanded profile noted as shipping in Phase 1; NFL screen PRD now exists. Earlier 2026-11-12 · open questions resolved (devices, accessibility, visual language); player-detail scope expanded and recorded in [`../prds/feature-player-explorer.md`](../prds/feature-player-explorer.md). Original brief dated 2026-11-10.
 
 > Where this brief and a PRD disagree, the PRD wins. The visual *system* (token values and rules) lives in [`design-language.md`](design-language.md); the working reference implementation is the prototype at [`../prototypes/phase1/`](../prototypes/phase1/).
 
@@ -66,7 +66,7 @@ Every active NFL player in one sortable, filterable, configurable table, with no
 
 **Rows.** ~1,250 players: QB, RB, WR, TE, K, team defense, and individual defensive players (DB, DL, LB). Practice-squad players appear only once they have played. Each row shows NFL team, position, age, bye week and injury status.
 
-**Controls.** Name search (partial, case/accent-insensitive); filters (position incl. a combined RB/WR/TE option, NFL team, injury status, bye week, minimum games played — they combine, the matching count is always shown, one "Clear all"); sort (any column, one click sorts, a second reverses, ties by name); scoring switch (full PPR / half / standard, plus tight-end premium and 6-point passing TDs — every number updates together); **range switch (season, or a custom range of weeks)**; column chooser (total points, points per game, high, low, volatility, games played, snap share, target share, next opponent and its difficulty, bye week, weekly trend line — toggling a column keeps sort and filters).
+**Controls.** Name search (partial, case/accent-insensitive); filters (position incl. a combined RB/WR/TE option and a combined IDP option of DB/DL/LB, NFL team, injury status, bye week, minimum games played, rookies — they combine, the matching count is always shown, one "Clear all"); sort (any column, one click sorts, a second reverses, ties by name); scoring switch (full PPR / half / standard, plus tight-end premium and 6-point passing TDs — every number updates together); **range switch (season, or a custom range of weeks, with a per-game/totals toggle)**; column chooser (total points, points per game, high, low, volatility, games played, snap share, target share, next opponent and its difficulty, bye week, weekly trend line — toggling a column keeps sort and filters).
 
 > The control surface follows progressive disclosure: a small default set of controls is visible, with advanced columns and filters behind a columns-and-filters panel (minimalist design; Hick's Law; no scattered disabled "coming soon" controls).
 
@@ -78,13 +78,13 @@ Every active NFL player in one sortable, filterable, configurable table, with no
 
 ## Screen: Player card
 
-One player's profile and record, so the owner can see how his points were made. Following Sleeper's actual layout, the card opens as a **single-scroll modal** with a persistent header (headshot, bio, player rankings, injury status, next-matchup) and section tabs. It follows the list's scoring and range controls.
+One player's profile and record, so the owner can see how his points were made. Following Sleeper's actual layout, the card opens as a **modal with a persistent header** (headshot, bio, player rankings, injury status, next-matchup) and **section tabs that swap content** (not one long scroll). It follows the list's scoring and range controls.
 
 - **Header** — headshot, name, position, NFL team, jersey, age, height/weight, college, draft year/round/pick, experience; player rankings (positional and overall); injury status; the next matchup with its difficulty.
 - **Game log** — one row per week: opponent, final score and win/loss, the position's stat line, fantasy points, snap share. Byes and missed weeks are gaps, not zeros. Upcoming (unplayed) weeks appear in the same table with blank stats and their matchup difficulty. Traded players show the current team in the header and the team they played for in each past week. Cells are heat-mapped (production green, negative plays red; the number is always shown).
 - **Beyond the game log** — season summary over the selected range; splits; usage and advanced-stat trends; a consistency view; position rank over time; a season-by-season career table; a season selector 2022→current (ADR-0006).
 
-The PRD requires only the weekly record at launch; the richer views are recorded under *Should have soon* in the Player explorer PRD.
+The weekly record is the PRD must-have; the richer views (recorded under *Should have soon* in the Player explorer PRD) are realized in the Phase 1 prototype and ship with it.
 
 ## Screen: NFL scores and schedule
 

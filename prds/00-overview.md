@@ -2,7 +2,7 @@
 
 **Four features and two infrastructure pieces, each in its own file in `prds/`. This page holds what they share: how they fit together, what each platform allows, and the terms every page uses.**
 
-**Created:** 2026-11-04 · **Owner:** William Sanchez · **Last updated:** 2026-11-09 (moved from the online PRD doc into the planning repo; multi-user design (ADR-0001), document locations and the dependency diagram brought up to date)
+**Created:** 2026-11-04 · **Owner:** William Sanchez · **Last updated:** 2026-11-15 (IDP default-scoring definition added to Shared terms during the prototype→PRD reconciliation). Earlier 2026-11-09 (moved from the online PRD doc into the planning repo; multi-user design (ADR-0001), document locations and the dependency diagram brought up to date)
 
 Fantasy Workbench is a personal web app for managing all of your fantasy football leagues on Sleeper, Yahoo and ESPN from one place. You are the first user, and the only one at launch; the app is designed so more users can be added without rework ([ADR-0001](../design/decisions/ADR-0001-design-for-multiple-users-from-day-one.md)). There are no real-money features and no public launch, so success means fewer missed lineup decisions and less time spent, not sign-ups or revenue.
 
@@ -107,6 +107,7 @@ Every page uses these definitions. A number shown in the app always means exactl
 | **Power score** | 60% season points per week + 25% last-3-weeks points per week + 15% all-play win rate, scaled to the top team's points per week |
 | **Win probability** | How likely a lineup is to win, from the gap between both teams' projections and how much their players' scores usually swing |
 | **Positional strength** | Points per week from a team's best starters: one quarterback, two running backs, two wide receivers, one tight end |
+| **IDP scoring** | Default fantasy points for individual defensive players (DB, DL, LB) until a league sets its own: tackle 1, assisted tackle 0.5, sack 2, interception 3, pass defended 1, forced fumble 2, fumble recovery 2, tackle for loss 0.5, defensive touchdown 6. Provisional — whether IDP belongs in the default column set or should be opt-in is still open |
 
 ## Sources
 
