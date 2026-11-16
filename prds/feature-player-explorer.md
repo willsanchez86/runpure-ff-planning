@@ -2,7 +2,7 @@
 
 **Every NFL player in one table you can sort, filter and configure, with no league needed. It's the first feature to build (after Data ETL & storage), and the base for every other player table in the app.**
 
-**Last updated:** 2026-11-12 · range switch set to the full season or a custom range of weeks; player-detail scope expanded under Should have soon. Earlier (2026-11-09): sign-in requirement (ADR-0015), game-night stats timing (ETL spec D7) and per-account settings (ADR-0001) aligned with decisions
+**Last updated:** 2026-11-15 · reconciled to the Phase 1 prototype (the as-built design is the Phase 1 spec): dropped the "last 3 games" column, added a combined IDP position filter, a per-game/totals toggle and a Rookies filter, noted the Expanded profile and Compare as realized in Phase 1, and recorded the prior-season limits. Earlier (2026-11-12): range switch set to the full season or a custom range of weeks; player-detail scope expanded under Should have soon. Earlier (2026-11-09): sign-in requirement (ADR-0015), game-night stats timing (ETL spec D7) and per-account settings (ADR-0001) aligned with decisions
 
 ## At a glance
 
@@ -64,21 +64,23 @@ And until a league is connected, the app has nothing to show.
 | **Full player list**: every active player at QB, RB, WR, TE, K, team defense and individual defensive positions (DB, DL, LB), with NFL team, position, age, bye week and injury status | Refreshed at least once a day. The full list loads and scrolls smoothly |
 | **Weekly stats and fantasy points** for every week each player has played | Points recalculate instantly when the scoring switch changes |
 | **Sorting** on any column | One click sorts, a second click reverses. Ties are broken by name |
-| **Filters**: position (including a combined running back, receiver and tight end option), NFL team, injury status, bye week, minimum games played | Filters combine. The number of matching players is always shown. One "Clear all" resets them |
+| **Filters**: position (including a combined running back, receiver and tight end option, and a combined individual-defensive option: DB, DL, LB), NFL team, injury status, bye week, minimum games played, rookies | Filters combine. The number of matching players is always shown. One "Clear all" resets them |
 | **Name search** | Finds partial names and ignores capitals and accents |
 | **Scoring switch**: full point per reception, half point, standard, plus tight end premium and 6-point passing touchdowns | Every number on the page updates together |
-| **Range switch**: the full season, or a custom range of weeks (for example weeks 4–9) | Applies to averages, totals, highs, lows and volatility. Fixed last-5 and last-3 windows were removed (owner, 2026-11-12) as they don't match how the list is used |
-| **Column chooser**: total points, points per game, last 3 games, high, low, volatility, games played, snap share, target share, next opponent and its difficulty, bye week, weekly trend line | Turning a column on or off doesn't reset the sort or filters |
+| **Range switch**: the full season, or a custom range of weeks (for example weeks 4–9), with a per-game or totals toggle for counting stats | Applies to averages, totals, highs, lows and volatility. Fixed last-5 and last-3 windows were removed (owner, 2026-11-12) as they don't match how the list is used |
+| **Column chooser**: total points, points per game, high, low, volatility, games played, snap share, target share, next opponent and its difficulty, bye week, weekly trend line | Turning a column on or off doesn't reset the sort or filters |
 | **Player detail** | Clicking a player shows his stats and points for each week |
 | **Remembered settings** | Reopening the app restores sort, filters, columns, range and scoring. Stored per user account, not in the browser only ([ADR-0001](../design/decisions/ADR-0001-design-for-multiple-users-from-day-one.md); system design §0, row 1) |
 
 ## Should have soon after
 
+*The Phase 1 prototype already realizes the **Expanded player profile** and **Compare from the list** below; they ship in Phase 1 rather than after. The rest remain post-Phase-1.*
+
 | Requirement | Done when |
 | --- | --- |
 | **Saved views**: name a combination of filters, sort and columns, such as "Waiver running backs" | One click restores it |
 | **Compare from the list**: tick up to four players and open them side by side; keep several player profiles open as tabs | The comparison opens with those players loaded; each tab holds one profile |
-| **Expanded player profile**: the player detail opens as a profile with a game log (the position's stat line, fantasy points, snap share, final score and win/loss, byes and missed weeks as gaps, and upcoming weeks shown with their matchup difficulty), plus splits, usage and advanced-stat trends, a consistency view, position rank over time, and a season-by-season career table | Each view follows the scoring and range controls; a season selector covers 2022 to the current season ([ADR-0006](../design/decisions/ADR-0006-backfill-2022-2026-once-then-load-only-data-that-can-still-change.md)) |
+| **Expanded player profile**: the player detail opens as a profile with a game log (the position's stat line, fantasy points, snap share, final score and win/loss, byes and missed weeks as gaps, and upcoming weeks shown with their matchup difficulty), plus splits, usage and advanced-stat trends, a consistency view, position rank over time, and a season-by-season career table. The profile's sections are tabs that swap content (not one long scroll) | Each view follows the scoring and range controls; a season selector on the profile covers 2022 to the current season ([ADR-0006](../design/decisions/ADR-0006-backfill-2022-2026-once-then-load-only-data-that-can-still-change.md)), while the list itself stays on the current season in Phase 1. Known Phase 1 limits: prior-season position ranks are a fixed estimate that doesn't follow the scoring switch, and prior-season final-score/win-loss is blank (lazy history carries no scores) |
 | **Grouped columns, view presets and advanced columns** (air-yards share, usage, efficiency), configured in a columns-and-filters panel | Choosing a preset or toggling columns keeps the sort and filters |
 | **Next week's projection** as a column, after Phase 1 | Uses the projection definition on the [Overview](00-overview.md) |
 | **Download the current view** as a spreadsheet file | Opens correctly in Excel and Google Sheets |
