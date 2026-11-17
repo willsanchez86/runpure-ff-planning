@@ -4,6 +4,7 @@
 |---|---|
 | Status | Accepted |
 | Date | 2026-11-05 |
+| Implementation started | 2026-11-16 (added at the owner's direction: Next.js app initialized in runpure-ff-frontend; builds with `next build`, runs with `next start`) |
 | Decision-makers | Project owner |
 | Consulted | None |
 | Confidence | High: stated by the project owner as the Phase 1 plan |

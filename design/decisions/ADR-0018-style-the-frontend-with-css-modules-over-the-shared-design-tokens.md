@@ -2,6 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-11-16
+**Implementation started:** 2026-11-16 (added at the owner's direction: tokens.css copy and first CSS Modules committed in runpure-ff-frontend)
 **Deciders:** William Sanchez
 **Rules out:** Tailwind
 

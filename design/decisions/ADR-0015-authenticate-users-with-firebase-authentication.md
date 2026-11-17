@@ -3,6 +3,7 @@
 **Status:** Accepted
 **Date:** 2026-11-08
 **Revised:** 2026-11-09, in place, at the owner's direction (not finalized): cross-references to the renamed ADR-0016 and to ADR-0017 added.
+**Implementation started:** 2026-11-16 (added at the owner's direction: frontend Google sign-in committed in runpure-ff-frontend)
 **Deciders:** William Sanchez
 
 ## Context
