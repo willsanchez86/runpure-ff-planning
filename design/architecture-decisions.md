@@ -1,6 +1,6 @@
 # Architecture Decision Log — Runpure FF
 
-**Owner / decider:** you · **Last updated:** 2026-11-10
+**Owner / decider:** you · **Last updated:** 2026-11-16
 Index of the project's architecture decisions. Each decided item is a full ADR in `design/decisions/`, written with the template in [`governance/templates.md`](../governance/templates.md). This log contains only what you have explicitly decided, plus the open decisions you listed. Claude does not add options, recommendations or outcomes here unless you decide them.
 
 **Renumbered 2026-11-08:** superseded ADRs were updated in place with the decisions that replaced them, the replacing ADRs were deleted, and the rest were renumbered. Old → new: ADR-0010 and ADR-0014 → ADR-0005; ADR-0016 → ADR-0008; ADR-0011 → ADR-0010; ADR-0012 → ADR-0011; ADR-0013 → ADR-0012; ADR-0015 → ADR-0013.
@@ -28,6 +28,9 @@ Index of the project's architecture decisions. Each decided item is a full ADR i
 | [ADR-0015](decisions/ADR-0015-authenticate-users-with-firebase-authentication.md) | Authenticate users with Firebase Authentication | Accepted (revised in place 2026-11-09: cross-references) | 2026-11-08 |
 | [ADR-0016](decisions/ADR-0016-define-the-api-contract-in-the-graphql-schema.md) | Define the API contract in the GraphQL schema | Accepted (revised in place 2026-11-09) | 2026-11-08 |
 | [ADR-0017](decisions/ADR-0017-use-graphql-for-the-backend-api.md) | Use GraphQL for the backend API | Accepted (revised in place 2026-11-09: server stack) | 2026-11-09 |
+| [ADR-0018](decisions/ADR-0018-style-the-frontend-with-css-modules-over-the-shared-design-tokens.md) | Style the frontend with CSS Modules over the shared design tokens | Accepted | 2026-11-16 |
+| [ADR-0019](decisions/ADR-0019-call-the-graphql-api-through-a-hand-written-request-layer-with-tanstack-query-for-caching.md) | Call the GraphQL API through a hand-written request layer with TanStack Query for caching | Accepted | 2026-11-16 |
+| [ADR-0020](decisions/ADR-0020-build-the-player-table-by-hand-with-fixed-height-virtualization.md) | Build the player table by hand with fixed-height virtualization | Accepted | 2026-11-16 |
 
 ## Open
 
@@ -40,3 +43,5 @@ Index of the project's architecture decisions. Each decided item is a full ADR i
 5. What is every interface throughout the complete pipeline? *(Your confirmation, 2026-11-08: nflverse release files to the pipeline (HTTPS GET, CSV); pipeline to MySQL (mysql2, hand-written SQL); Express API to MySQL (mysql2); browser to the Express API (GraphQL over HTTPS, JSON; ADR-0014, ADR-0017); operator queries and commands (GraphQL fields `pipelineRuns` and `ingestLedger`, operator accounts only, per ADR-0017; command-line jobs ingest, backfill, headers). Added by ADR-0015: browser to Firebase Auth, and the API to Firebase for token checks.)*
 6. What principles do we apply to our API (REST, other)? *(Decided 2026-11-09: GraphQL, ADR-0017; contract is the GraphQL schema, ADR-0016. Research: [`research/api-style-rest-trpc-graphql-research-2026-11-08.md`](../research/api-style-rest-trpc-graphql-research-2026-11-08.md). Server stack decided the same day (owner, accepting Claude's recommendations): GraphQL Yoga, code-first with Pothos, trusted documents, polling for the live board; operator endpoints move into GraphQL. All in ADR-0017.)*
 7. Monitoring and alerting: out of scope for now; give it its own PRD in a later phase. *(Your direction, 2026-11-08, from ETL open decision D8.)*
+8. How should we enhance and enforce the project's coding standards — readability, security and correctness/async safety, with MISRA-style rule tiers and formatter/linter/CI enforcement? *(Proposed plan for review, not yet decided: [`design/reviews/2026-11-13-coding-standards-enhancement-plan.md`](reviews/2026-11-13-coding-standards-enhancement-plan.md). Four decisions in its §6.)*
+9. What from the BMAD-METHOD framework ([github.com/bmad-code-org](https://github.com/bmad-code-org)) should we apply to the development setup and this project's workflows? *(Open; not yet reviewed. Evaluate its agents, workflows and conventions against our governance and code-repo kit.)*

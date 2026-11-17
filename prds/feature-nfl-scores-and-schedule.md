@@ -4,7 +4,7 @@
 
 **Created:** 2026-11-15 · **Owner:** William Sanchez
 
-**Last updated:** 2026-11-15 — written during the prototype→PRD reconciliation; the owed PRD section the [interface design brief](../design/interface-design-brief.md) flagged. The Phase 1 prototype at [`../prototypes/phase1/`](../prototypes/phase1/) is the reference implementation.
+**Last updated:** 2026-11-16 — reconciled to the frontend implementation spec ([`specs/ff-nfl-scores-and-schedule-spec.md`](../specs/ff-nfl-scores-and-schedule-spec.md), owner decisions NS1–NS3): the screen opens on the regular season at the current week, preseason only on request (open question answered); rest days and the division-game marker ship in Phase 1. Earlier 2026-11-15 — written during the prototype→PRD reconciliation; the owed PRD section the [interface design brief](../design/interface-design-brief.md) flagged. The Phase 1 prototype at [`../prototypes/phase1/`](../prototypes/phase1/) is the reference implementation.
 
 ## At a glance
 
@@ -59,7 +59,7 @@ Without a connected league, you still want the week at a glance: who plays whom,
 
 | Requirement | Done when |
 | --- | --- |
-| **Rest days and division-game marker** on the game detail | Shown where the feed carries them |
+| **Rest days and division-game marker** on the game detail — *ships in Phase 1* (owner, 2026-11-16; spec NS2: the feed already carries both) | Shown where the feed carries them |
 | **Jump from a game to either team's upcoming schedule** | One click opens that team's remaining games |
 
 ## Later
@@ -81,7 +81,7 @@ Without a connected league, you still want the week at a glance: who plays whom,
 | Question | Blocks building? | Who answers | Status |
 | --- | --- | --- | --- |
 | How soon after each game do final scores become final in nflverse? | No, answer during build | Engineering | Open (shared with the Player explorer) |
-| Should preseason be shown by default, or only on request? | No, answer during build | You | Open |
+| Should preseason be shown by default, or only on request? Answered (owner, 2026-11-16; spec NS1): only on request — the screen opens on the regular season at the current week, then the postseason once it starts | No, answer during build | You | Answered |
 
 ## Build order
 
