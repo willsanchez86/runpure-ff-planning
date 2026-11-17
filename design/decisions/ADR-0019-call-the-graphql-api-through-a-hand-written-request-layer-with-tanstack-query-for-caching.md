@@ -2,6 +2,7 @@
 
 **Status:** Accepted
 **Date:** 2026-11-16
+**Implementation started:** 2026-11-17 (added at the owner's direction: gqlRequest + TanStack Query client committed in runpure-ff-frontend)
 **Deciders:** William Sanchez
 **Rules out:** Apollo Client; urql
 

@@ -4,6 +4,7 @@
 |---|---|
 | Status | Accepted |
 | Date | 2026-11-05 |
+| Implementation started | 2026-11-17 (added at the owner's direction: the frontend scoring engine computes points from stat lines in runpure-ff-frontend) |
 | Decision-makers | Project owner |
 | Consulted | None |
 | Confidence | High |

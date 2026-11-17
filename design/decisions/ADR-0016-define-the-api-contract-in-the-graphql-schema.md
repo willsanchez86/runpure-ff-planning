@@ -3,6 +3,7 @@
 **Status:** Accepted
 **Date:** 2026-11-08
 **Revised:** 2026-11-09, in place, at the owner's direction (not finalized): the API style was decided as GraphQL ([ADR-0017](ADR-0017-use-graphql-for-the-backend-api.md)), so the contract moves from an OpenAPI document (first version of this ADR) to the GraphQL schema; later the same day, the code-first workflow and the trusted-documents hand-off were added.
+**Implementation started:** 2026-11-17 (added at the owner's direction: the frontend's codegen loop — schema copy, generated types, persisted-documents manifest — committed in runpure-ff-frontend)
 **Deciders:** William Sanchez
 
 ## Context
