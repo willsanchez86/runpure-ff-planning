@@ -1,6 +1,7 @@
 # System Design — Fantasy Workbench (Runpure FF)
 
-**Status:** Draft v2.1 · **Owner:** William Sanchez · **Date:** 2026-11-10
+**Status:** Draft v2.2 · **Owner:** William Sanchez · **Date:** 2026-11-16
+**v2.2 (2026-11-16):** frontend construction decisions added to §3 (ADR-0018 to ADR-0020, from the frontend specs `specs/ff-frontend-foundation-spec.md`, `specs/ff-player-explorer-spec.md`, `specs/ff-nfl-scores-and-schedule-spec.md`).
 **v2.1 (2026-11-10):** §8 lists what to consider before the first deployment, from the 2026-11-10 security review of the backend setup script (owner: defer to the deployment phase).
 **v2.0 (2026-11-09):** rewritten to match the accepted ADRs (ADR-0001 to ADR-0017). Removed: DuckDB, the storage bucket and its snapshot layout, Parquet and mart files, GitHub Actions as the pipeline host, Postgres and SQLite, the single repository, and the medallion layer names. The guardrail's ten requirements (§0) are kept word for word as the owner set them; a new column says how each is met now.
 **v1.0–v1.4 (2026-11-05):** first drafts, written before the ADRs; superseded by v2.0.
@@ -120,6 +121,9 @@ Purple: the backend process · Gray: outside services, the database, the browser
 | Frontend to API | The browser calls the API directly over public HTTPS; CORS limited to the frontend's origin | ADR-0014 |
 | Sign-in | Firebase Authentication | ADR-0015 |
 | API style and contract | GraphQL (Yoga, Pothos, trusted documents); the GraphQL schema is the contract | ADR-0017, ADR-0016 |
+| Frontend styling | CSS Modules per component over the shared `design/tokens.css`; no styling framework | ADR-0018 |
+| Frontend API client | Hand-written request layer (fetch, token, persisted hash); TanStack Query for caching; no GraphQL client library | ADR-0019 |
+| Frontend player table | Hand-rolled, with fixed-height row virtualization; no table library | ADR-0020 |
 | Who reads league data from the platforms (later phase) | The backend's platform connections, not the pipeline | ETL spec D15 |
 
 **Not decided (tracked elsewhere):** how user accounts are created: public sign-up or created by you (no ADR yet; ADR-0015 covers sign-in only); hosting provider for the backend, the frontend and MySQL (decision log, open item 4; a deployment-phase decision); backup and recovery (ETL spec D16); monitoring and alerting (decision log, open item 7; its own PRD later); where projections come from (Waivers & trades PRD; the Overview's placeholder formula is used until then).
