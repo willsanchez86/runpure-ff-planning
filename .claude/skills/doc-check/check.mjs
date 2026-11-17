@@ -230,10 +230,27 @@ const changedFiles = (() => {
   } catch { return null; }
   return new Set(out.split('\n').filter(Boolean));
 })();
+// An ADR edit that only adds/changes its "Implementation started" or "Status"
+// line is metadata, not a decision change (templates.md §1 allows exactly these
+// edits), so it does not require downstream updates in the same change.
+const META_LINE =
+  /^[+-]\s*(\*\*(Implementation started|Status):\*\*|\|\s*(Implementation started|Status)\s*\|)/;
+const metadataOnlyAdrChange = (file) => {
+  try {
+    const args = process.argv;
+    const at = args.indexOf('--base');
+    const diffArgs = at > -1
+      ? ['diff', '-U0', args[at + 1], 'HEAD', '--', file]
+      : ['diff', '--cached', '-U0', '--', file];
+    const diff = execFileSync('git', diffArgs, { cwd: root, encoding: 'utf8' });
+    const lines = diff.split('\n').filter((l) => /^(\+(?!\+\+)|-(?!--))/.test(l));
+    return lines.length > 0 && lines.every((l) => META_LINE.test(l));
+  } catch { return false; }
+};
 if (changedFiles) {
   for (const f of changedFiles) {
     const m = f.match(/^design\/decisions\/ADR-(\d{4})-/);
-    if (!m) continue;
+    if (!m || metadataOnlyAdrChange(f)) continue;
     for (const path of downstream) {
       if (historical(path) || changedFiles.has(rel(path))) continue;
       if (new RegExp(`ADR-${m[1]}\\b`).test(read(path))) {
