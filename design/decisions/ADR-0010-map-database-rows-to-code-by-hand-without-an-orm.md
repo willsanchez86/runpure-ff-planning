@@ -3,6 +3,7 @@
 **Status:** Accepted
 **Date:** 2026-11-05
 **Revised:** 2026-11-08, in place, at the owner's direction (not finalized): the DuckDB assumption and the open migration-tool item removed, per ADR-0012 and ADR-0011. 2026-11-09: **Rules out** line added for the doc check.
+**Implementation started:** 2026-11-12 (added by the owner 2026-11-17, reconciling the gate: the first hand-written row mappings merged with the ETL load path on 2026-11-12)
 **Deciders:** William Sanchez
 **Rules out:** ORM
 

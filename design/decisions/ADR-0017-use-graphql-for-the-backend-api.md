@@ -3,6 +3,7 @@
 **Status:** Accepted
 **Date:** 2026-11-09
 **Revised:** 2026-11-09, in place, at the owner's direction (not finalized): server stack decided (Yoga, Pothos, trusted documents, polling); operator endpoints moved into GraphQL. 2026-11-09: **Rules out** line added for the doc check.
+**Implementation started:** 2026-11-09 (added by the owner 2026-11-17, reconciling the gate: the Yoga/Pothos endpoint scaffold was committed with the backend's first code)
 **Deciders:** William Sanchez
 **Rules out:** OpenAPI; REST endpoint; tRPC
 

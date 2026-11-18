@@ -3,6 +3,7 @@
 **Status:** Accepted
 **Date:** 2026-11-08
 **Revised:** 2026-11-09, in place, at the owner's direction (not finalized): cross-references to the renamed ADR-0016 and to ADR-0017 added; token checking described for one GraphQL endpoint.
+**Implementation started:** 2026-11-17 (added by the owner: the frontend's live apiSource calls the Express GraphQL endpoint directly from the browser)
 **Deciders:** William Sanchez
 
 ## Context

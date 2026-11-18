@@ -3,6 +3,7 @@
 **Status:** Accepted
 **Date:** 2026-11-05
 **Revised:** 2026-11-08, in place, at the owner's direction (not finalized): this ADR now carries the decision that replaced its first version. First version (2026-11-05): run scheduled pipeline jobs inside the always-on Next.js app server. Current (2026-11-06): a separate Express backend holds the API, the pipeline and its scheduled tasks. 2026-11-09: the controller and routing layers became GraphQL resolvers behind one endpoint (ADR-0017).
+**Implementation started:** 2026-11-09 (added by the owner 2026-11-17, reconciling the gate: the Express backend's first code was committed to runpure-ff-backend on 2026-11-09)
 **Deciders:** William Sanchez
 
 ## Context
