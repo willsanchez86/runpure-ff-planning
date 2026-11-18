@@ -1,6 +1,6 @@
 # Architecture Decision Log — Runpure FF
 
-**Owner / decider:** you · **Last updated:** 2026-11-16
+**Owner / decider:** you · **Last updated:** 2026-11-17
 Index of the project's architecture decisions. Each decided item is a full ADR in `design/decisions/`, written with the template in [`governance/templates.md`](../governance/templates.md). This log contains only what you have explicitly decided, plus the open decisions you listed. Claude does not add options, recommendations or outcomes here unless you decide them.
 
 **Renumbered 2026-11-08:** superseded ADRs were updated in place with the decisions that replaced them, the replacing ADRs were deleted, and the rest were renumbered. Old → new: ADR-0010 and ADR-0014 → ADR-0005; ADR-0016 → ADR-0008; ADR-0011 → ADR-0010; ADR-0012 → ADR-0011; ADR-0013 → ADR-0012; ADR-0015 → ADR-0013.
@@ -25,12 +25,13 @@ Index of the project's architecture decisions. Each decided item is a full ADR i
 | [ADR-0012](decisions/ADR-0012-transform-pipeline-data-in-typescript-and-mysql-with-no-transform-library.md) | Transform pipeline data in TypeScript and MySQL, with no transform library | Accepted (revised in place 2026-11-08, 2026-11-09 and 2026-11-10) | 2026-11-06 |
 | [ADR-0013](decisions/ADR-0013-keep-play-by-play-and-depth-charts-for-the-current-season-only.md) | Keep play-by-play and depth charts for the current season only | Accepted (revised in place 2026-11-08, 2026-11-09 and 2026-11-10) | 2026-11-06 |
 | [ADR-0014](decisions/ADR-0014-call-the-express-api-directly-from-the-browser.md) | Call the Express API directly from the browser | Accepted (revised in place 2026-11-09: cross-references) | 2026-11-08 |
-| [ADR-0015](decisions/ADR-0015-authenticate-users-with-firebase-authentication.md) | Authenticate users with Firebase Authentication | Accepted (revised in place 2026-11-09: cross-references) | 2026-11-08 |
+| [ADR-0015](decisions/ADR-0015-authenticate-users-with-firebase-authentication.md) | Authenticate users with Firebase Authentication | Accepted (revised in place 2026-11-09: cross-references) (provider set fixed to Google + passwordless email link, per ADR-0021) | 2026-11-08 |
 | [ADR-0016](decisions/ADR-0016-define-the-api-contract-in-the-graphql-schema.md) | Define the API contract in the GraphQL schema | Accepted (revised in place 2026-11-09) | 2026-11-08 |
 | [ADR-0017](decisions/ADR-0017-use-graphql-for-the-backend-api.md) | Use GraphQL for the backend API | Accepted (revised in place 2026-11-09: server stack) | 2026-11-09 |
 | [ADR-0018](decisions/ADR-0018-style-the-frontend-with-css-modules-over-the-shared-design-tokens.md) | Style the frontend with CSS Modules over the shared design tokens | Accepted | 2026-11-16 |
 | [ADR-0019](decisions/ADR-0019-call-the-graphql-api-through-a-hand-written-request-layer-with-tanstack-query-for-caching.md) | Call the GraphQL API through a hand-written request layer with TanStack Query for caching | Accepted | 2026-11-16 |
 | [ADR-0020](decisions/ADR-0020-build-the-player-table-by-hand-with-fixed-height-virtualization.md) | Build the player table by hand with fixed-height virtualization | Accepted | 2026-11-16 |
+| [ADR-0021](decisions/ADR-0021-sign-in-with-google-and-passwordless-email-link.md) | Sign in with Google and passwordless email link | Accepted | 2026-11-17 |
 
 ## Open
 
@@ -45,3 +46,4 @@ Index of the project's architecture decisions. Each decided item is a full ADR i
 7. Monitoring and alerting: out of scope for now; give it its own PRD in a later phase. *(Your direction, 2026-11-08, from ETL open decision D8.)*
 8. How should we enhance and enforce the project's coding standards — readability, security and correctness/async safety, with MISRA-style rule tiers and formatter/linter/CI enforcement? *(Proposed plan for review, not yet decided: [`design/reviews/2026-11-13-coding-standards-enhancement-plan.md`](reviews/2026-11-13-coding-standards-enhancement-plan.md). Four decisions in its §6.)*
 9. What from the BMAD-METHOD framework ([github.com/bmad-code-org](https://github.com/bmad-code-org)) should we apply to the development setup and this project's workflows? *(Open; not yet reviewed. Evaluate its agents, workflows and conventions against our governance and code-repo kit.)*
+10. User-account decisions deferred to the real-league-integration phase *(owner, 2026-11-17, via ADR-0021)*: how accounts are created beyond the manual `users` insert; what per-user data the app stores beyond settings (platform connections, leagues followed, preferences); which user actions are recorded in the database (sign-in audit, change log).

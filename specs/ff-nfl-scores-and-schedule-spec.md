@@ -2,7 +2,7 @@
 
 **The NFL screen: every game by week with final scores, byes and game detail, and the one-click jump from a team to its players.**
 
-**Date:** 2026-11-16 · **Version:** v1.0 · **Status:** Draft for owner review. No code exists yet.
+**Date:** 2026-11-16 · **Version:** v1.0 · **Status:** Implemented (frontend `features/nfl/`, 2026-11-17). Built directly against the live contract — the cut-over (foundation §13 step 7) landed before this screen, so §10's sample-source step and step 4 collapsed into one build.
 **Companion to:** [`prds/feature-nfl-scores-and-schedule.md`](../prds/feature-nfl-scores-and-schedule.md) (the PRD this implements).
 **Builds on:** [`specs/ff-frontend-foundation-spec.md`](ff-frontend-foundation-spec.md) — shell, auth, data layer, styling, states. Decisions F1–F8 / P1–P8 there apply here.
 **Reference implementation:** [`prototypes/phase1/`](../prototypes/phase1/) (`viewNFL`, `gameCard`).

@@ -33,7 +33,7 @@ Decided by the owner during frontend planning. F3, F5 and F6 are construction-te
 | F1 | — | Frontend specs are split per PRD: this foundation spec plus one spec per feature PRD (Player explorer; NFL scores and schedule) |
 | F2 | §6.4, §7 | The frontend specs define the GraphQL contract additions the screens need; the backend implements them. Until they land, screens build against a sample data source behind the data-layer interface |
 | F3 | §9 | Styling is CSS Modules per component over the shared [`design/tokens.css`](../design/tokens.css) custom properties. No styling framework. Recorded in [ADR-0018](../design/decisions/ADR-0018-style-the-frontend-with-css-modules-over-the-shared-design-tokens.md) |
-| F4 | §5 | Sign-in is **Google only** in Phase 1. The prototype's email/password form and Apple button are not built |
+| F4 | §5 | Sign-in is **Google only** in Phase 1. The prototype's email/password form and Apple button are not built. *Revised (owner, 2026-11-17, ADR-0021): passwordless email link is added alongside Google at the auth milestone; passwords and the Apple button stay out* |
 | F5 | §6 | The GraphQL **request layer is hand-written**: fetch + Firebase token + persisted-operation hash. **Caching is TanStack Query** (revised by the owner 2026-11-16 after a cited review). No GraphQL client library (no Apollo Client, no urql) — a normalized cache is not needed by read-only screens. Recorded in [ADR-0019](../design/decisions/ADR-0019-call-the-graphql-api-through-a-hand-written-request-layer-with-tanstack-query-for-caching.md) |
 | F6 | — | The player table is **hand-rolled**, including fixed-height row virtualization. No table library. Detailed in the Player explorer spec. Recorded in [ADR-0020](../design/decisions/ADR-0020-build-the-player-table-by-hand-with-fixed-height-virtualization.md) |
 | F7 | §8 | Settings persist server-side per account (the PRD must-have), with a local mirror for instant startup. The server copy wins on conflict |
@@ -168,7 +168,7 @@ Composability rule: `features/*` may import from `components/`, `lib/` and `styl
 | Lint | ESLint flat config: `eslint-config-next` + `typescript-eslint` strict-type-checked + `eslint-plugin-jsdoc` (code-repo kit comment rules) | F8 |
 | Tests | Vitest + React Testing Library (P7) | |
 | Codegen | GraphQL Code Generator, client preset + persisted-documents output | ADR-0016 |
-| Auth | Firebase JS SDK, Google provider only | ADR-0015, F4 |
+| Auth | Firebase JS SDK, Google + passwordless email link (ADR-0021) | ADR-0015, F4 |
 | Server-data caching | TanStack Query (`@tanstack/react-query`) | F5 (revised); the accepted standard for React server-state caching |
 | Runtime dependencies beyond these | **None** — no GraphQL client, no table, no chart, no CSS framework (F3, F5, F6; charts are hand-rolled SVG as in the prototype) | Owner's dependency bar |
 
@@ -180,7 +180,7 @@ Composability rule: `features/*` may import from `components/`, `lib/` and `styl
 
 ## 5. Sign-in and auth states
 
-- **Google sign-in only** (F4): `signInWithPopup`, falling back to redirect where popups are blocked. The sign-in screen keeps the prototype's layout minus the email form and Apple button, with the invite-only note.
+- **Google sign-in + passwordless email link** (F4 as revised by ADR-0021): Google via `signInWithPopup`, falling back to redirect where popups are blocked; the email-link flow arrives with the auth milestone. The sign-in screen keeps the prototype's layout minus the password form and Apple button, with the invite-only note.
 - **Auth context** wraps the app: current Firebase user, a cached `getIdToken()` for the data layer, sign-out. The account menu in the top bar shows name/email and Sign out, as in the prototype.
 - **Guards:** no Firebase user → `/sign-in`. Signed in but `me` returns null (no app account row — accounts are created manually, system design §3) → the "account isn't set up" screen: plain message, sign-out, **no data fetched**.
 - Every GraphQL request carries `Authorization: Bearer <ID token>`; a 401/invalid-token response signs the user out locally and returns to `/sign-in`.
