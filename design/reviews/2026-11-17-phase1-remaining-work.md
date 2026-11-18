@@ -3,7 +3,7 @@
 **A dated working record of everything left to finish Phase 1 (three screens on real nflverse data, signed in, deployed). Working status only — decisions stay in ADRs, scope stays in the PRDs/specs.**
 
 **Created:** 2026-11-17 · **Owner:** William Sanchez · Update the checkboxes and the Last-updated line as items land.
-**Last updated:** 2026-11-17 (contract cut-over merged: backend read API + frontend apiSource; integration test and payload measurement still open)
+**Last updated:** 2026-11-17 (NFL screen built on the live contract; all three screens now exist — next up: Firebase auth milestone)
 
 **Priority:** `[CRITICAL]` — Phase 1 cannot ship without it · `[IMPORTANT]` — protects quality/process; shippable without it, at known risk · `[OPTIONAL]` — hygiene; do when convenient
 **Sources:** [`specs/ff-frontend-foundation-spec.md`](../../specs/ff-frontend-foundation-spec.md) §13 (sequencing), [`design/architecture-decisions.md`](../architecture-decisions.md) (open items), the three frontend specs, [`design/system-design.md`](../system-design.md) §8.
@@ -16,11 +16,14 @@
 - [x] Scoring engine (ADR-0007) with golden tests — merged
 - [x] Player explorer complete: table (ADR-0020), card, compare, columns modal, season switch (PE1–PE4) — merged
 - [x] Code-style policy (AGENTS rules 5–7) applied across frontend and backend
-- [x] ADR Implementation-started lines: 0002, 0007, 0015, 0016, 0018, 0019, 0020
+- [x] ADR Implementation-started lines: 0002, 0007, 0008, 0010, 0014, 0015, 0016, 0017, 0018, 0019, 0020 (standing authorization in templates.md)
+- [x] Contract cut-over merged and integration-tested on real nflverse data (2026-11-17)
+- [x] Post-test fixes merged: IDP removed end to end (PE5), player population tightened (11,608 → 6,881), O(n²) target-share scan precomputed, Sleeper-style list/game-log polish (# ranks, centred values, group gaps, coloured position subline)
+- [x] ETL spec v2.18: `play` yardage columns widened to SMALLINT after a live overflow; full ingest green (pbp 26,246 rows)
 
 ## Immediate — no blockers
 
-- [ ] `[CRITICAL]` **NFL screen** (foundation §13 step 6; [`specs/ff-nfl-scores-and-schedule-spec.md`](../../specs/ff-nfl-scores-and-schedule-spec.md)) — last unbuilt screen, runs on the sample source
+- [x] `[CRITICAL]` **NFL screen** (foundation §13 step 6; [`specs/ff-nfl-scores-and-schedule-spec.md`](../../specs/ff-nfl-scores-and-schedule-spec.md)) — built 2026-11-17 directly on the live contract (the cut-over had already landed, so the sample-first step was unnecessary)
 - [x] `[OPTIONAL]` Backend code-style commit on `feat/player-read-api-contract` (if not yet committed)
 - [ ] `[IMPORTANT]` Frontend ruleset: make `verify` + `security-baseline` required checks
 - [ ] `[OPTIONAL]` Planning repo ruleset (optional): PR-only `main`
