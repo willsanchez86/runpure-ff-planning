@@ -61,7 +61,7 @@ Write an ADR for a decision that affects (from [AWS Prescriptive Guidance](https
 **Status:** Proposed / Accepted / Rejected / Deprecated / Superseded by ADR-NNNN
 **Date:** YYYY-MM-DD (decided) · recorded YYYY-MM-DD
 **Revised:** YYYY-MM-DD, in place, at the owner's direction (not finalized): <what changed; earlier versions> (only if revised before implementation)
-**Implementation started:** YYYY-MM-DD (added by the owner when the first implementing code is committed)
+**Implementation started:** YYYY-MM-DD (dated to the first implementing commit; added under the owner's standing authorization of 2026-11-17, reviewed in the planning PR)
 **Deciders:** <who decided>
 **Rules out:** <term>; <term> (optional: tools or approaches this decision excludes; the doc check fails any PRD, design doc or spec that names one without citing this ADR)
 
@@ -103,7 +103,7 @@ Write an ADR for a decision that affects (from [AWS Prescriptive Guidance](https
 | **Status** | One value from the lifecycle table |
 | **Date** | The date it was decided, and the date it was recorded if different |
 | **Revised** | Only for an ADR changed in place before implementation: the date, what changed, and its earlier versions |
-| **Implementation started** | Added by the owner on the date the first code carrying out the ADR is committed; from then on the ADR is frozen except for its status line |
+| **Implementation started** | Dated to the first commit carrying out the ADR. Added by Claude under the owner's standing authorization (2026-11-17) in the same change set as the gating pull request, and reviewed by the owner in the planning PR; from then on the ADR is frozen except for its status line |
 | **Deciders** | Who made the decision |
 | **Rules out** | Optional. Terms the decision excludes, separated by semicolons. The doc check reports any current document that names one, unless the line also negates it or cites this ADR |
 | **Context** | The facts and forces that made a decision necessary |

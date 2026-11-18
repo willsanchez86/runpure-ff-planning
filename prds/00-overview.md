@@ -107,7 +107,7 @@ Every page uses these definitions. A number shown in the app always means exactl
 | **Power score** | 60% season points per week + 25% last-3-weeks points per week + 15% all-play win rate, scaled to the top team's points per week |
 | **Win probability** | How likely a lineup is to win, from the gap between both teams' projections and how much their players' scores usually swing |
 | **Positional strength** | Points per week from a team's best starters: one quarterback, two running backs, two wide receivers, one tight end |
-| **IDP scoring** | Default fantasy points for individual defensive players (DB, DL, LB) until a league sets its own: tackle 1, assisted tackle 0.5, sack 2, interception 3, pass defended 1, forced fumble 2, fumble recovery 2, tackle for loss 0.5, defensive touchdown 6. Provisional — whether IDP belongs in the default column set or should be opt-in is still open |
+| **IDP scoring** *(IDP removed from Phase 1 — owner 2026-11-17, player spec PE5; definition kept for a later phase)* | Default fantasy points for individual defensive players (DB, DL, LB) until a league sets its own: tackle 1, assisted tackle 0.5, sack 2, interception 3, pass defended 1, forced fumble 2, fumble recovery 2, tackle for loss 0.5, defensive touchdown 6. Provisional — whether IDP belongs in the default column set or should be opt-in is still open |
 
 ## Sources
 

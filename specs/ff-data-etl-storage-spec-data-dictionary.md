@@ -755,7 +755,7 @@ Grain: one play. Natural key: game_id, play_id. Profiled: 70,118 rows (2025 full
 | 182 | `lateral_receiving_yards` | integer | 100.0% | -3 to 80 | SMALLINT | Yards by the lateral receiver on pass plays with laterals. |
 | 183 | `lateral_rusher_player_id` | text | 100.0% | 1 values: 00-0035710 | VARCHAR(10) ascii_bin | Unique identifier for the player that received the last(!) lateral on a run play. |
 | 184 | `lateral_rusher_player_name` | text | 100.0% | 1 values: D.Jones | VARCHAR(16) | Name of the player who received the last lateral on a run play; multi-lateral plays are listed in the nfl-data lateral_yards data. |
-| 185 | `lateral_rushing_yards` | integer | 100.0% | 1 to 3 | TINYINT UNSIGNED | Yards by the lateral rusher on run plays with laterals. |
+| 185 | `lateral_rushing_yards` | integer | 100.0% | 1 to 3 | SMALLINT | Yards by the lateral rusher on run plays with laterals. Profiled range is positive, but yardage can be negative; widened from TINYINT UNSIGNED in v2.18. |
 | 186 | `lateral_sack_player_id` | empty | 100.0% |  | VARCHAR(10) ascii_bin (empty in profiled seasons) | Unique identifier for the player that received the lateral on a sack. |
 
 ### Play-by-play, columns 187–372 (continued)
@@ -837,7 +837,7 @@ Grain: one play. Natural key: game_id, play_id. Profiled: 70,118 rows (2025 full
 | 259 | `fumble_recovery_1_player_id` | text | 98.8% | up to 10 chars | VARCHAR(10) ascii_bin | Unique identifier for one of the players who recovered a fumble. |
 | 260 | `fumble_recovery_1_player_name` | text | 98.8% | up to 18 chars | VARCHAR(32) | Name of one of the players who recovered a fumble. |
 | 261 | `fumble_recovery_2_team` | text | 100.0% | 3 values: CAR, LAC, PIT | VARCHAR(4) ascii | Team of another player who recovered a fumble. |
-| 262 | `fumble_recovery_2_yards` | integer | 100.0% | 0 to 3 | TINYINT UNSIGNED | Yards gained by another player who recovered a fumble. |
+| 262 | `fumble_recovery_2_yards` | integer | 100.0% | 0 to 3 | SMALLINT | Yards gained by another player who recovered a fumble. A negative value in the live 2026 file overflowed TINYINT UNSIGNED; widened in v2.18. |
 | 263 | `fumble_recovery_2_player_id` | text | 100.0% | 4 values: 00-0032889, 00-0033886, 00-0036338, 00-0039342 | VARCHAR(10) ascii_bin | Unique identifier for another player who recovered a fumble. |
 | 264 | `fumble_recovery_2_player_name` | text | 100.0% | 4 values: A.Robinson, T.Dye, T.Watt, X.Legette | VARCHAR(16) | Name of another player who recovered a fumble. |
 | 265 | `sack_player_id` | text | 97.6% | up to 10 chars | VARCHAR(10) ascii_bin | Unique identifier for the player credited with a solo sack. |
