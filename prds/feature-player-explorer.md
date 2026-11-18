@@ -2,7 +2,7 @@
 
 **Every NFL player in one table you can sort, filter and configure, with no league needed. It's the first feature to build (after Data ETL & storage), and the base for every other player table in the app.**
 
-**Last updated:** 2026-11-16 · reconciled to the frontend implementation specs (owner decisions PE1–PE4, [`specs/ff-player-explorer-spec.md`](../specs/ff-player-explorer-spec.md)): the list gains its own season selector covering 2022 to the current season; prior seasons load real stored data on demand, so the previously recorded prior-season limits (estimated ranks, blank results) no longer apply; incremental "show more" paging is replaced by virtualized scrolling of the full list. Earlier (2026-11-15): reconciled to the Phase 1 prototype (the as-built design is the Phase 1 spec): dropped the "last 3 games" column, added a combined IDP position filter, a per-game/totals toggle and a Rookies filter, noted the Expanded profile and Compare as realized in Phase 1, and recorded the prior-season limits. Earlier (2026-11-12): range switch set to the full season or a custom range of weeks; player-detail scope expanded under Should have soon. Earlier (2026-11-09): sign-in requirement (ADR-0015), game-night stats timing (ETL spec D7) and per-account settings (ADR-0001) aligned with decisions
+**Last updated:** 2026-11-17 · IDP removed from Phase 1 (owner, during cut-over testing; spec PE5): the list covers QB/RB/WR/TE/K and team defenses; individual defensive players return in a later phase if an IDP league needs them. Earlier 2026-11-16 · reconciled to the frontend implementation specs (owner decisions PE1–PE4, [`specs/ff-player-explorer-spec.md`](../specs/ff-player-explorer-spec.md)): the list gains its own season selector covering 2022 to the current season; prior seasons load real stored data on demand, so the previously recorded prior-season limits (estimated ranks, blank results) no longer apply; incremental "show more" paging is replaced by virtualized scrolling of the full list. Earlier (2026-11-15): reconciled to the Phase 1 prototype (the as-built design is the Phase 1 spec): dropped the "last 3 games" column, added a combined IDP position filter, a per-game/totals toggle and a Rookies filter, noted the Expanded profile and Compare as realized in Phase 1, and recorded the prior-season limits. Earlier (2026-11-12): range switch set to the full season or a custom range of weeks; player-detail scope expanded under Should have soon. Earlier (2026-11-09): sign-in requirement (ADR-0015), game-night stats timing (ETL spec D7) and per-account settings (ADR-0001) aligned with decisions
 
 ## At a glance
 
@@ -61,10 +61,10 @@ And until a league is connected, the app has nothing to show.
 
 | Requirement | Done when |
 | --- | --- |
-| **Full player list**: every active player at QB, RB, WR, TE, K, team defense and individual defensive positions (DB, DL, LB), with NFL team, position, age, bye week and injury status | Refreshed at least once a day. The full list loads and scrolls smoothly |
+| **Full player list**: every active player at QB, RB, WR, TE, K and team defense, with NFL team, position, age, bye week and injury status *(individual defensive positions removed from Phase 1 — owner, 2026-11-17, spec PE5)* | Refreshed at least once a day. The full list loads and scrolls smoothly |
 | **Weekly stats and fantasy points** for every week each player has played | Points recalculate instantly when the scoring switch changes |
 | **Sorting** on any column | One click sorts, a second click reverses. Ties are broken by name |
-| **Filters**: position (including a combined running back, receiver and tight end option, and a combined individual-defensive option: DB, DL, LB), NFL team, injury status, bye week, minimum games played, rookies | Filters combine. The number of matching players is always shown. One "Clear all" resets them |
+| **Filters**: position (including a combined running back, receiver and tight end option), NFL team, injury status, bye week, minimum games played, rookies *(the combined IDP option left with IDP — spec PE5)* | Filters combine. The number of matching players is always shown. One "Clear all" resets them |
 | **Name search** | Finds partial names and ignores capitals and accents |
 | **Scoring switch**: full point per reception, half point, standard, plus tight end premium and 6-point passing touchdowns | Every number on the page updates together |
 | **Range switch**: the full season, or a custom range of weeks (for example weeks 4–9), with a per-game or totals toggle for counting stats | Applies to averages, totals, highs, lows and volatility. Fixed last-5 and last-3 windows were removed (owner, 2026-11-12) as they don't match how the list is used |
@@ -92,6 +92,7 @@ And until a league is connected, the app has nothing to show.
 | Filters for "free agents in my league" and "on my teams" | Need connected leagues; come with Waivers & trades |
 | Your league's exact scoring applied to the whole list | Needs a connected league |
 | A watchlist that flags changes in status or role | Useful, but not needed to browse and sort |
+| Individual defensive players (DB, DL, LB) | Removed from Phase 1 (owner, 2026-11-17, spec PE5); return with an IDP league in a later phase |
 
 ## How we'll measure it
 
