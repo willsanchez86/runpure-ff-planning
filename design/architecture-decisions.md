@@ -1,6 +1,6 @@
 # Architecture Decision Log — Runpure FF
 
-**Owner / decider:** you · **Last updated:** 2026-11-17
+**Owner / decider:** you · **Last updated:** 2026-11-18
 Index of the project's architecture decisions. Each decided item is a full ADR in `design/decisions/`, written with the template in [`governance/templates.md`](../governance/templates.md). This log contains only what you have explicitly decided, plus the open decisions you listed. Claude does not add options, recommendations or outcomes here unless you decide them.
 
 **Renumbered 2026-11-08:** superseded ADRs were updated in place with the decisions that replaced them, the replacing ADRs were deleted, and the rest were renumbered. Old → new: ADR-0010 and ADR-0014 → ADR-0005; ADR-0016 → ADR-0008; ADR-0011 → ADR-0010; ADR-0012 → ADR-0011; ADR-0013 → ADR-0012; ADR-0015 → ADR-0013.
@@ -47,3 +47,8 @@ Index of the project's architecture decisions. Each decided item is a full ADR i
 8. How should we enhance and enforce the project's coding standards — readability, security and correctness/async safety, with MISRA-style rule tiers and formatter/linter/CI enforcement? *(Proposed plan for review, not yet decided: [`design/reviews/2026-11-13-coding-standards-enhancement-plan.md`](reviews/2026-11-13-coding-standards-enhancement-plan.md). Four decisions in its §6.)*
 9. What from the BMAD-METHOD framework ([github.com/bmad-code-org](https://github.com/bmad-code-org)) should we apply to the development setup and this project's workflows? *(Open; not yet reviewed. Evaluate its agents, workflows and conventions against our governance and code-repo kit.)*
 10. User-account decisions deferred to the real-league-integration phase *(owner, 2026-11-17, via ADR-0021)*: how accounts are created beyond the manual `users` insert; what per-user data the app stores beyond settings (platform connections, leagues followed, preferences); which user actions are recorded in the database (sign-in audit, change log).
+11. ESPN posture: integrate reads (and possibly writes) given Disney's terms prohibit automated access on their face, or exclude ESPN? *(Open. Requirements, constraints and candidate approaches: [`design/reviews/2026-11-18-platform-integration-open-decisions.md`](reviews/2026-11-18-platform-integration-open-decisions.md) OD1; platform facts: [`research/platform-apis-sleeper-yahoo-espn-research-2026-11-18.md`](../research/platform-apis-sleeper-yahoo-espn-research-2026-11-18.md) §3.)*
+12. Yahoo access: when to file Yahoo's now-mandatory API access application (new apps are read-only), and whether any legacy Yahoo developer app credentials with write scope exist. *(Open. Same review, OD context; research §2. Affects the changes-phase ordering "Yahoo first, then Sleeper".)*
+13. Live game-day tier placement: inside the always-on Express backend or a separate worker? *(Open; carried from the Platform connections PRD, "Who answers: You". Review OD3.)*
+14. Credential and disconnect policy: disconnect deletes stored credentials; what happens to already-synced league data and snapshots. *(Open. Review OD4.)*
+15. Sleeper writes: pursue the unofficial GraphQL path, defer the decision to the changes phase, or keep Sleeper view-only? *(Open. Review OD2; research §1. Affects the same ordering as item 12.)*

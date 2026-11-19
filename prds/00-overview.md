@@ -113,11 +113,11 @@ PRDs say what's needed and why; implementation specs say how it's built; ADRs re
 
 | Platform | How you sign in | Viewing data | Making changes |
 | --- | --- | --- | --- |
-| **Sleeper** | Your username; Sleeper has no "sign in with" option | Official public API, free, up to 1,000 requests a minute | Unofficial: only through Sleeper's private system using your sign-in token. Could break or be blocked |
-| **Yahoo** | Yahoo's own sign-in page, through a Yahoo developer app you register | Official API | Official API. Adding and dropping players is known to work; lineup changes not yet confirmed |
-| **ESPN** | Two cookies copied from your browser while signed in to espn.com | Unofficial, undocumented. ESPN changed it once already, in 2019 | Unofficial and the least documented of the three |
+| **Sleeper** | Your username; Sleeper has no "sign in with" option | Official public API, free, no key, up to 1,000 requests a minute | No official way. Community tools use Sleeper's private system with your sign-in token — against Sleeper's terms, could break or be blocked |
+| **Yahoo** | Yahoo's own sign-in page, through a Yahoo developer app you register | Official API — but since mid-2026 behind a mandatory, human-reviewed access application (personal use is a permitted category) | Official API, fully documented (lineups, add/drop, claims, trades) — but Yahoo no longer grants write access to new apps; only legacy app credentials can write |
+| **ESPN** | Two cookies copied from your browser while signed in to espn.com | Unofficial, undocumented. ESPN changed it in 2019 and again in 2024; ESPN's terms prohibit automated access | Unofficial and the least documented of the three |
 
-Viewing data: Sleeper and Yahoo are official and supported; ESPN is unofficial. Making changes: Yahoo is official; Sleeper works but isn't officially supported; ESPN is unofficial and least reliable.
+Viewing data: Sleeper is official and open; Yahoo is official behind an application; ESPN is unofficial. Making changes: no platform currently offers an open, official write path — Yahoo's is documented but gated, Sleeper's and ESPN's are unofficial. Full facts with sources: [platform API research, 2026-11-18](../research/platform-apis-sleeper-yahoo-espn-research-2026-11-18.md); the pending decisions this raises: [open-decisions review](../design/reviews/2026-11-18-platform-integration-open-decisions.md).
 
 ## Shared terms
 
