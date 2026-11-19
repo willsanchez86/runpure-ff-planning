@@ -1,7 +1,7 @@
 # Templates — Runpure FF
 
-**Last updated:** 2026-11-09
-**Purpose:** blank structures for the project's recurring documents, so every document of the same kind has the same shape. The documents themselves, and the rules governing them, are described in [`governance/documentation-suite.md`](documentation-suite.md).
+**Last updated:** 2026-11-18
+**Purpose:** blank structures for the project's recurring documents, so every document of the same kind has the same shape. Document authority, ownership and change rules are in [`documentation-suite.md`](documentation-suite.md); lifecycle stages and handoffs are in [`delivery-lifecycle.md`](delivery-lifecycle.md).
 
 **Contents:**
 1. Architecture Decision Record (ADR)
@@ -122,7 +122,7 @@ File: `prds/feature-<name>.md` for a feature, `prds/infra-<name>.md` for a techn
 
 **Rules for the sections** (owner, 2026-11-18):
 
-- **Targets carry two independent labels** (owner, 2026-11-18). Approval: **Proposed** or **Owner-approved** — who set the target. Measurement: **Uncalibrated** or **Baselined** — whether actual observations support it, stated with when, how and what was observed. The dimensions never mix: instrumentation existing does not make a target Baselined (only real observations do); an Owner-approved target stays Owner-approved while Uncalibrated; calibrating a number never changes who approved it. Every figure in "What success looks like" and "How we'll measure it" carries both labels and says how it is measured and over what window; an unlabeled number is an error, not a default.
+- **Targets carry two independent labels** (owner, 2026-11-18). Approval: **Proposed** or **Owner-approved** — who set the target. Measurement: **Uncalibrated** or **Baselined** — whether actual observations support it, stated with when, how and what was observed. The dimensions never mix: instrumentation existing does not make a target Baselined (only real observations do); an Owner-approved target stays Owner-approved while Uncalibrated; calibrating a number never changes who approved it. Every figure in "What success looks like" and "How we'll measure it" carries both labels and says how it is measured, **for which population**, and over what window; an unlabeled number is an error, not a default.
 - **"Done when" includes the key failure behavior.** A must-have's acceptance criterion states what happens when its data is missing, stale or unverifiable (gaps stay gaps; writes fail closed), not only the success path.
 - **Assumptions are open questions.** An assumption that could invalidate the PRD is recorded in "Open questions" with who validates it and whether it blocks building — never left implicit.
 

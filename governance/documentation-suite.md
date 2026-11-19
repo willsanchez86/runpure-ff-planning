@@ -1,7 +1,7 @@
 # Documentation Suite — Runpure FF
 
-**Last updated:** 2026-11-15
-**Purpose:** which planning documents exist, what each is for, where it lives, and how it changes. Blank structures for each are in [`governance/templates.md`](templates.md). Background research: [`research/minimal-planning-document-suite-research-2026-11-05.md`](../research/minimal-planning-document-suite-research-2026-11-05.md).
+**Last updated:** 2026-11-18
+**Purpose:** which planning documents exist, what each is for, where it lives, and how it changes. Lifecycle stages and handoffs are defined in [`delivery-lifecycle.md`](delivery-lifecycle.md); this suite remains authoritative for document ownership, approval, baselining, and location. Blank structures for each are in [`governance/templates.md`](templates.md). Background research: [`research/minimal-planning-document-suite-research-2026-11-05.md`](../research/minimal-planning-document-suite-research-2026-11-05.md).
 
 ---
 
@@ -54,6 +54,8 @@ The project owner (William Sanchez) is the only approver. Claude may draft and p
 | **Research** | Evidence behind decisions, with sources | `research/<topic>-research-YYYY-MM-DD.md` | — |
 | **Decision reviews** | Dated working records of a review of open decisions | `design/reviews/` | — |
 | **Prototypes** | Working mock-ups on sample data that a PRD builds from; not the product | `prototypes/` | — |
+| **Delivery lifecycle** | Workflow stages, handoffs and document-to-lifecycle mapping; does not replace this suite’s governance rules | [`governance/delivery-lifecycle.md`](delivery-lifecycle.md) | — |
+| **Work tracking & completion** | Status, remaining-work visibility and evidence needed to close work items; not a replacement for PRDs or the decision log. Designated tracker (owner, 2026-11-19): GitHub Issues in `runpure-ff-planning`; `design/reviews/` records are historical | [`governance/work-tracking-and-completion.md`](work-tracking-and-completion.md) | — |
 
 ### Document A: PRDs
 - **Purpose:** what is built and why, with scope boundaries so the project doesn't creep.
@@ -83,5 +85,8 @@ The project owner (William Sanchez) is the only approver. Claude may draft and p
 | Implementation specs | Project owner | Per change to that piece | `specs/` |
 | MTDP | Project owner | Per release | `design/mtdp.md` (not yet written) |
 | Research | Claude, for the owner | When its decision is revisited | `research/` |
+| Decision reviews | Project owner | When reviewed decisions are revisited | `design/reviews/` |
 | Prototypes | Project owner | When the PRD that uses it changes | `prototypes/` |
+| Delivery lifecycle | Project owner | When lifecycle stages or handoffs change | [`governance/delivery-lifecycle.md`](delivery-lifecycle.md) |
+| Work tracking & completion | Project owner | When work-tracking process or completion rules change | [`governance/work-tracking-and-completion.md`](work-tracking-and-completion.md) |
 | Templates and this document | Project owner | When a rule changes | `governance/` |
