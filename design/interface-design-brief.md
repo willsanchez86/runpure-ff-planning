@@ -26,7 +26,7 @@ The interface is a fast, dense, configurable data tool for someone who knows fan
 | Gaps, not zeros | A missed week or bye shows as a gap in tables, charts and trend lines; averages divide by games actually played | Player explorer, Weekly review PRDs |
 | Show the sample size | Games played sits next to every average, so two big games don't look like a star | Player explorer PRD |
 | One meaning per number | Every calculated measure uses the Overview's shared definition, and its tooltip says so | Overview PRD |
-| Freshness is visible | Every data screen shows when its data last updated; out-of-date data is marked, never shown as current | Platform connections, Game-day PRDs |
+| Freshness is visible | Every data screen shows when its data last updated; out-of-date data is marked, never shown as current | Platform connections, Lineup management PRDs |
 | Settings stick | Sort, filters, columns, range and scoring are restored on the next visit, stored per account | Player explorer PRD; ADR-0001 |
 | Familiar first | Phase 1 follows Sleeper's screens and interactions, in a look of its own | Overview PRD |
 
@@ -50,8 +50,8 @@ One shell holds every screen: navigation, the signed-in account, and a data-fres
 |---|---|---|
 | Players | Player list; Player card | Phase 1 |
 | NFL | Scores and schedule, by week | Phase 1 |
-| Game day | Lineup problems across every league; live board | Viewing phase |
-| Waivers & trades | Team needs, free-agent finder, waiver calendar, trade evaluator | Viewing phase |
+| Lineup | Lineup problems across every league; live board; team needs, free-agent finder, waiver calendar | Viewing phase |
+| Trades | Trade evaluator, buy/sell list, proposals | Viewing phase |
 | Weekly review | Standings and power, heatmap, positional strength, tables, player comparison | Viewing phase |
 | Leagues | Connect Sleeper, Yahoo, ESPN; connection health; what each league allows | Viewing phase |
 
@@ -62,7 +62,7 @@ One shell holds every screen: navigation, the signed-in account, and a data-fres
 
 ## Screen: Player list
 
-Every active NFL player in one sortable, filterable, configurable table, with no league needed. It is the first screen built and the base for the player tables in Waivers & trades and Weekly review, so design it as a **reusable table**.
+Every active NFL player in one sortable, filterable, configurable table, with no league needed. It is the first screen built and the base for the player tables in Lineup management, Trades and Weekly review, so design it as a **reusable table**.
 
 **Rows.** ~1,100 players: QB, RB, WR, TE, K and team defense (individual defensive players removed from Phase 1 — owner, 2026-11-17; player spec PE5). Practice-squad players appear only once they have played. Each row shows NFL team, position, age, bye week and injury status.
 
@@ -110,7 +110,7 @@ A number always means its Overview definition; headers and tooltips use these na
 
 ## Later screens the design must not rule out
 
-The shell, the reusable table, and the visual language must carry (without being designed now): the Game-day problem list and live board, free-agent finder / waiver calendar / trade evaluator, Weekly review views, Leagues and connection health, and the change-confirmation flow. The prototype already covers the Weekly review views on sample data.
+The shell, the reusable table, and the visual language must carry (without being designed now): Lineup management (the game-day problem list and live board, free-agent finder, waiver calendar), Trades (evaluator, buy/sell list, proposal inbox), Weekly review views, Leagues and connection health, the change-confirmation flow, and the unscheduled News and Weather surfaces. The prototype already covers the Weekly review views on sample data.
 
 ## Constraints and resolved questions
 

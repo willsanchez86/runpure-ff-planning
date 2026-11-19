@@ -1,6 +1,6 @@
 # Rules for agents in this repo
 
-1. Record as Accepted only what the owner decided. Your own recommendations stay Proposed or in chat.
+1. Record as Accepted only what the owner decided. Your own recommendations stay Proposed or in chat. "Decided", "Answered" and "Closed" statuses require the owner's explicit approval; "closed by default" is not a status.
 2. An ADR with an **Implementation started** line is frozen except its status line. A changed decision is a new ADR.
 3. An ADR without that line is revised in place (`adr-supersede` skill, Path A).
 4. When an ADR changes, update every PRD, design doc and spec that mentions it in the same change. The reverse also holds: when a decision is made or discovered while building a prototype (or any downstream artifact), reconcile it back into the PRDs, design brief and specs it affects in the same change — a prototype is never a silent newer source of truth.

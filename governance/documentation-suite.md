@@ -21,6 +21,10 @@ Earlier copies of the PRDs and the 2026-11-08 open-decisions review were online 
 
 The project owner (William Sanchez) is the only approver. Claude may draft and propose, but records as decided only what the owner has decided.
 
+- **Proposed stays distinguishable from approved — in every document, not only ADRs.** A requirement, figure or threshold the owner has not decided is labeled **Proposed** with attribution and date; removing the label is itself an owner decision. Approval and measurement are independent dimensions ([`governance/templates.md`](templates.md) §2): a target can be Owner-approved yet Uncalibrated, and only actual observations make it Baselined.
+- **Nothing is decided, accepted, approved, answered or closed without the owner's explicit approval** (owner, 2026-11-18). "Closed by default", "closed because the owner didn't know", and silence after a presentation are not approval. A Claude-originated resolution stays Proposed, with attribution and date, until the owner approves it; any downstream document or implementation relying on one must say it relies on a Proposed resolution. The doc check fails an Answered/Closed status that rests on an unapproved recommendation.
+- **Cross-cutting requirements are documented once and referenced.** A rule that binds several features (shared terms, the live-data/snapshot/verification contract, capability definitions) lives in `prds/00-overview.md`; other documents link to it rather than restate it, so it cannot drift into conflicting copies.
+
 ### 2.1 The Baseline Rule
 - No code is written for a feature until its PRD and the parts of the system design it relies on are committed to `main`.
 - Minor adjustments (UI tweaks, variable naming) don't require document updates.

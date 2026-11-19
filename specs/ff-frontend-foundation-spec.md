@@ -259,7 +259,7 @@ type DataFreshness { playersLoadedAt: String, statsLoadedAt: String, gamesLoaded
 
 Ported from the prototype's shell, as components:
 
-- **Left nav:** brand block; Browse → Players, NFL; "Coming later" → Game day, Waivers & trades, Weekly review, Leagues as non-clickable, `aria-disabled` items with a "soon" tag (no dead ends); the dashed league-picker placeholder ("No leagues connected"). Collapses to a horizontal bar ≤980 px.
+- **Left nav:** brand block; Browse → Players, NFL; "Coming later" → Lineup, Trades, Weekly review, Leagues (renamed with the 2026-11-18 PRD restructure; the built nav's labels follow in the next frontend change) as non-clickable, `aria-disabled` items with a "soon" tag (no dead ends); the dashed league-picker placeholder ("No leagues connected"). Collapses to a horizontal bar ≤980 px.
 - **Top bar:** freshness note (from `dataFreshness`; amber + banner when stale), account chip + menu.
 - **Overlay manager:** one scrim overlay at a time (card / compare / columns); `role="dialog"`, `aria-modal`, ESC closes, scrim-click closes, focus is trapped and returned. Non-scrim popovers (account menu, dropdowns) close on outside click/ESC.
 - **Tooltip system:** single tooltip root, shows on hover **and focus**, ESC-dismissable (WCAG 1.4.13), `aria-live` where the prototype uses it (match count).
@@ -275,10 +275,10 @@ Ported from the prototype's shell, as components:
 | Range aggregates: total, PPG (÷ games played), high, low, volatility (sd, min 3 games) | Overview Shared terms; design language |
 | Positional and overall ranks, per week and cumulative | Prototype behavior |
 | Fantasy points allowed per defense/position → matchup difficulty (rank 1–32; ≤8 Tough, ≥25 Easy) | Overview Shared terms |
-| Placeholder projection | Overview Shared terms (placeholder until the projections decision) |
+| Placeholder projection | Overview Shared terms (placeholder until the Projections & rankings model ships — its own phase; owner, 2026-11-18) |
 | Weekly trend; gaps for byes/missed weeks (never zeros) | Brief; design language |
 
-**Performance budget:** ~1,250 players × ≤18 weeks ≈ 20–25k stat lines in memory; a full recompute (points → ranks → FPA → aggregates) targets <150 ms on desktop, memoized by (scoring config, range). This meets the PRD's "re-sort/re-filter under half a second" and "points recalculate instantly".
+**Performance budget:** measured 2026-11-17 on the live contract: ~6,900 players served per season (most without stat lines) and ~9k regular-season stat lines mid-season — on the order of 15–20k over a full season, in line with the original ~20–25k budget; a full recompute (points → ranks → FPA → aggregates) targets <150 ms on desktop, memoized by (scoring config, range). This meets the PRD's "re-sort/re-filter under half a second" and "points recalculate instantly".
 
 **Tests:** golden-case unit tests per position and per scoring option — the cost ADR-0007 accepted ("the app holds and tests scoring logic") is paid here.
 

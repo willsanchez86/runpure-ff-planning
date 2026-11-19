@@ -120,6 +120,12 @@ The templates in sections 2–4 are kept short. Where each document lives is set
 
 File: `prds/feature-<name>.md` for a feature, `prds/infra-<name>.md` for a technical PRD. Shared context (how the pages fit together, what each platform allows, shared terms) lives once in [`prds/00-overview.md`](../prds/00-overview.md); a PRD links to it instead of repeating it. Every PRD uses the sections below in this order. A technical PRD may add sections of its own (Data ETL & storage adds scope, sources, outputs and risks).
 
+**Rules for the sections** (owner, 2026-11-18):
+
+- **Targets carry two independent labels** (owner, 2026-11-18). Approval: **Proposed** or **Owner-approved** — who set the target. Measurement: **Uncalibrated** or **Baselined** — whether actual observations support it, stated with when, how and what was observed. The dimensions never mix: instrumentation existing does not make a target Baselined (only real observations do); an Owner-approved target stays Owner-approved while Uncalibrated; calibrating a number never changes who approved it. Every figure in "What success looks like" and "How we'll measure it" carries both labels and says how it is measured and over what window; an unlabeled number is an error, not a default.
+- **"Done when" includes the key failure behavior.** A must-have's acceptance criterion states what happens when its data is missing, stale or unverifiable (gaps stay gaps; writes fail closed), not only the success path.
+- **Assumptions are open questions.** An assumption that could invalidate the PRD is recorded in "Open questions" with who validates it and whether it blocks building — never left implicit.
+
 ````markdown
 # [Feature name]
 
@@ -131,6 +137,7 @@ File: `prds/feature-<name>.md` for a feature, `prds/infra-<name>.md` for a techn
 
 |  |  |
 | --- | --- |
+| **Status** | [SDLC stage — vocabulary in `prds/00-overview.md` "How to read each page" — plus one line of detail, dated] |
 | **Serves** | [The journey it serves] |
 | **Viewing data** | [Which phase] |
 | **Making changes** | [Which phase, or "None. View only"] |

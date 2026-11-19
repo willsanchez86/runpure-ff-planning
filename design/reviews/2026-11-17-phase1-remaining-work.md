@@ -3,7 +3,7 @@
 **A dated working record of everything left to finish Phase 1 (three screens on real nflverse data, signed in, deployed). Working status only — decisions stay in ADRs, scope stays in the PRDs/specs.**
 
 **Created:** 2026-11-17 · **Owner:** William Sanchez · Update the checkboxes and the Last-updated line as items land.
-**Last updated:** 2026-11-17 (NFL screen built on the live contract; all three screens now exist — next up: Firebase auth milestone)
+**Last updated:** 2026-11-18 (owner: deployment deferred until real league integration works — the Pre-deploy section waits; next up: Firebase auth milestone, then the Viewing phase)
 
 **Priority:** `[CRITICAL]` — Phase 1 cannot ship without it · `[IMPORTANT]` — protects quality/process; shippable without it, at known risk · `[OPTIONAL]` — hygiene; do when convenient
 **Sources:** [`specs/ff-frontend-foundation-spec.md`](../../specs/ff-frontend-foundation-spec.md) §13 (sequencing), [`design/architecture-decisions.md`](../architecture-decisions.md) (open items), the three frontend specs, [`design/system-design.md`](../system-design.md) §8.
@@ -37,7 +37,7 @@
 - [x] `[IMPORTANT]` **Measure the full-season stat-line payload** — measured 2026-11-17: ~5.6 MB for 2026 (acceptable; shrinks further with IDP removed per spec PE5)
 - [ ] `[CRITICAL]` Firebase project: enable Google sign-in; frontend public config in `.env.local`; backend admin credentials; insert the owner's `users` row (account creation remains manual — open decision)
 
-## Pre-deploy (foundation §13 step 8) — Phase 1 ships hosted
+## Pre-deploy (foundation §13 step 8) — deferred: deploy waits until real league integration works (owner, 2026-11-18)
 
 - [ ] `[CRITICAL]` Hosting decision → ADR(s): always-on Node host (backend), MySQL host, frontend host (decision log open item 4)
 - [ ] `[CRITICAL]` MTDP written ([`governance/templates.md`](../../governance/templates.md) §4) — required before the first hosted deploy

@@ -1,6 +1,7 @@
 # System Design — Fantasy Workbench (Runpure FF)
 
-**Status:** Draft v2.2 · **Owner:** William Sanchez · **Date:** 2026-11-16
+**Status:** Draft v2.3 · **Owner:** William Sanchez · **Date:** 2026-11-18
+**v2.3 (2026-11-18):** aligned to the owner's PRD restructure: functional list uses the new feature set (Lineup management, Trades, News, Weather, Projections & rankings); snapshots row added to data ownership; sign-in cites ADR-0021; account-creation deferral cites decision-log open question 10; §8's projections line reflects the decided Projections phase; the load estimate's player-row figure replaced with the 2026-11-17 measurement (~6,900 served vs. the ~1,250 pre-build estimate).
 **v2.2 (2026-11-16):** frontend construction decisions added to §3 (ADR-0018 to ADR-0020, from the frontend specs `specs/ff-frontend-foundation-spec.md`, `specs/ff-player-explorer-spec.md`, `specs/ff-nfl-scores-and-schedule-spec.md`).
 **v2.1 (2026-11-10):** §8 lists what to consider before the first deployment, from the 2026-11-10 security review of the backend setup script (owner: defer to the deployment phase).
 **v2.0 (2026-11-09):** rewritten to match the accepted ADRs (ADR-0001 to ADR-0017). Removed: DuckDB, the storage bucket and its snapshot layout, Parquet and mart files, GitHub Actions as the pipeline host, Postgres and SQLite, the single repository, and the medallion layer names. The guardrail's ten requirements (§0) are kept word for word as the owner set them; a new column says how each is met now.
@@ -33,7 +34,7 @@
 
 ## 1. Requirements
 
-**Functional** (from the PRDs): browse every NFL player; connect Sleeper, Yahoo and ESPN; view and later change lineups, claims and trades; game-day problem list and live board; waiver and trade tools; weekly review analytics.
+**Functional** (from the PRDs): browse every NFL player; NFL scores and schedule; connect Sleeper, Yahoo and ESPN; lineup management (game-day problem list and live board, waivers, adds/drops, weekly team and settings snapshots); trades (evaluator, buy/sell list, proposals); weekly review analytics; news and forecast-weather surfaces (unscheduled); the app's own projections and rankings model (Projections phase).
 
 **Phase 1** (Overview PRD): the player list, player card, and NFL scores and schedule, with nflverse data and no leagues connected.
 
@@ -51,7 +52,7 @@
 
 **Constraints:** one developer; TypeScript for the backend (ADR-0008, ADR-0009), on Node 24 (ADR-0017); Next.js for the frontend (ADR-0002); MySQL only (ADR-0005).
 
-**Load estimate:** one user. Phase 1 data is about 235 MB of CSV and about 410 MB in MySQL (ETL spec §7.3). The player list has about 1,250 fantasy-relevant rows; weekly player stats about 19,400 rows a season. Launch load doesn't size anything; simplicity and reliability do. Multi-user readiness is a design driver (§0).
+**Load estimate:** one user. Phase 1 data is about 235 MB of CSV and about 410 MB in MySQL (ETL spec §7.3). The API serves about 6,900 player rows per season (measured 2026-11-17 on the live contract after the PE5 population tightening; the on-screen list shows fewer once filters apply — the earlier ~1,250 figure was a pre-build estimate of list-visible rows); weekly player stats about 19,400 rows a season in MySQL. Launch load doesn't size anything; simplicity and reliability do. Multi-user readiness is a design driver (§0).
 
 ## 2. High-level design
 
@@ -119,14 +120,14 @@ Purple: the backend process · Gray: outside services, the database, the browser
 | Data access | Hand-written SQL with mysql2; no ORM; schema changes by hand; no transform library | ADR-0010, ADR-0011, ADR-0012 |
 | Scoring | Calculated in the app from stored stats | ADR-0007 |
 | Frontend to API | The browser calls the API directly over public HTTPS; CORS limited to the frontend's origin | ADR-0014 |
-| Sign-in | Firebase Authentication | ADR-0015 |
+| Sign-in | Firebase Authentication; providers: Google + passwordless email link | ADR-0015, ADR-0021 |
 | API style and contract | GraphQL (Yoga, Pothos, trusted documents); the GraphQL schema is the contract | ADR-0017, ADR-0016 |
 | Frontend styling | CSS Modules per component over the shared `design/tokens.css`; no styling framework | ADR-0018 |
 | Frontend API client | Hand-written request layer (fetch, token, persisted hash); TanStack Query for caching; no GraphQL client library | ADR-0019 |
 | Frontend player table | Hand-rolled, with fixed-height row virtualization; no table library | ADR-0020 |
 | Who reads league data from the platforms (later phase) | The backend's platform connections, not the pipeline | ETL spec D15 |
 
-**Not decided (tracked elsewhere):** how user accounts are created: public sign-up or created by you (no ADR yet; ADR-0015 covers sign-in only); hosting provider for the backend, the frontend and MySQL (decision log, open item 4; a deployment-phase decision); backup and recovery (ETL spec D16); monitoring and alerting (decision log, open item 7; its own PRD later); where projections come from (Waivers & trades PRD; the Overview's placeholder formula is used until then).
+**Not decided (tracked elsewhere):** how user accounts are created, what per-user data is stored beyond settings, and which user actions are recorded — deferred to the real-league-integration phase (decision log, open question 10, via ADR-0021); hosting provider for the backend, the frontend and MySQL (decision log, open item 4; a deployment-phase decision); backup and recovery (ETL spec D16); monitoring and alerting (decision log, open item 7; its own PRD later); where projections come from is decided: our own model (the Projections & rankings PRD); its approach and error metric are open there, and the Overview's placeholder formula is used until it ships.
 
 ## 4. Deep dive
 
@@ -139,6 +140,7 @@ Purple: the backend process · Gray: outside services, the database, the browser
 | Users and account-owned rows | API | MySQL, keyed to the Firebase `uid` |
 | Leagues, rosters, matchups, transactions, platform sign-ins (later phase) | Platform connections, in the backend | MySQL; sign-ins encrypted, key outside the database (§0 row 4) |
 | Live scores and lock status (later phase) | Platform connections' live tier | MySQL, disposable |
+| Weekly team snapshots and league-settings snapshots (later phase; the Overview's historical-snapshots term) | Platform connections, recorded for Lineup management and Trades | MySQL, append-only history with capture timestamps |
 
 **API** (ADR-0014 to ADR-0017):
 - One GraphQL endpoint over public HTTPS. CORS allows only the frontend's origin. Every request carries a Firebase ID token in the `Authorization` header, and a request without a valid token is rejected.
@@ -179,14 +181,14 @@ The backend and frontend are separate apps in separate repos (ADR-0008). The Gra
 | Browser calls the API directly | A private backend address; the API is public and must check every token | ADR-0014 |
 | GraphQL | Simpler REST for Phase 1, free HTTP caching, status-code monitoring | ADR-0017 |
 | Current-season-only play-by-play and depth charts | Historical play-by-play analytics | ADR-0013 |
-| Placeholder projections | Trade-tool quality until projections are decided | Waivers & trades PRD |
+| Placeholder projections | Trade-tool quality until the model ships | Projections & rankings PRD |
 
 ## 8. Revisit as it grows
 
 - More users → no redesign (§0): add backend instances, move jobs to a separate worker (ADR-0008's upgrade trigger), enlarge the database, open sign-up.
 - Live board latency → server-sent-event subscriptions instead of polling (ADR-0017).
 - Outside API clients → add depth, alias and cost limits alongside trusted documents (ADR-0017).
-- Projections → a separate modeling component if built.
+- Projections → the Projections & rankings model (its own phase, decided 2026-11-18); a separate modeling component if its compute outgrows the backend.
 
 **Before the first deployment** (to consider in the deployment phase; none is needed locally):
 - Production settings: `NODE_ENV=production`; startup refuses a missing `FRONTEND_ORIGIN`; a `TRUST_PROXY` setting for the number of proxies in front of the API, without which every client shares one rate limit.

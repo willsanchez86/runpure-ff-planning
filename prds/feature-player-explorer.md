@@ -2,17 +2,18 @@
 
 **Every NFL player in one table you can sort, filter and configure, with no league needed. It's the first feature to build (after Data ETL & storage), and the base for every other player table in the app.**
 
-**Last updated:** 2026-11-17 · IDP removed from Phase 1 (owner, during cut-over testing; spec PE5): the list covers QB/RB/WR/TE/K and team defenses; individual defensive players return in a later phase if an IDP league needs them. Earlier 2026-11-16 · reconciled to the frontend implementation specs (owner decisions PE1–PE4, [`specs/ff-player-explorer-spec.md`](../specs/ff-player-explorer-spec.md)): the list gains its own season selector covering 2022 to the current season; prior seasons load real stored data on demand, so the previously recorded prior-season limits (estimated ranks, blank results) no longer apply; incremental "show more" paging is replaced by virtualized scrolling of the full list. Earlier (2026-11-15): reconciled to the Phase 1 prototype (the as-built design is the Phase 1 spec): dropped the "last 3 games" column, added a combined IDP position filter, a per-game/totals toggle and a Rookies filter, noted the Expanded profile and Compare as realized in Phase 1, and recorded the prior-season limits. Earlier (2026-11-12): range switch set to the full season or a custom range of weeks; player-detail scope expanded under Should have soon. Earlier (2026-11-09): sign-in requirement (ADR-0015), game-night stats timing (ETL spec D7) and per-account settings (ADR-0001) aligned with decisions
+**Last updated:** 2026-11-18 · governance correction: open question Q3, closed in 2026-11-08 on Claude's recommendation, is ratified via the owner's PE3/PE4 decisions. Earlier 2026-11-17 · IDP removed from Phase 1 (owner, during cut-over testing; spec PE5): the list covers QB/RB/WR/TE/K and team defenses; individual defensive players return in a later phase if an IDP league needs them. Earlier 2026-11-16 · reconciled to the frontend implementation specs (owner decisions PE1–PE4, [`specs/ff-player-explorer-spec.md`](../specs/ff-player-explorer-spec.md)): the list gains its own season selector covering 2022 to the current season; prior seasons load real stored data on demand, so the previously recorded prior-season limits (estimated ranks, blank results) no longer apply; incremental "show more" paging is replaced by virtualized scrolling of the full list. Earlier (2026-11-15): reconciled to the Phase 1 prototype (the as-built design is the Phase 1 spec): dropped the "last 3 games" column, added a combined IDP position filter, a per-game/totals toggle and a Rookies filter, noted the Expanded profile and Compare as realized in Phase 1, and recorded the prior-season limits. Earlier (2026-11-12): range switch set to the full season or a custom range of weeks; player-detail scope expanded under Should have soon. Earlier (2026-11-09): sign-in requirement (ADR-0015), game-night stats timing (ETL spec D7) and per-account settings (ADR-0001) aligned with decisions
 
 ## At a glance
 
 |  |  |
 | --- | --- |
+| **Status** | **In use (local)** — spec implemented ([ff-player-explorer-spec](../specs/ff-player-explorer-spec.md)), integration-tested on real data and polished (2026-11-17); running locally daily. Hosted deployment deferred ([Overview](00-overview.md)) |
 | **Serves** | Looking up and comparing any player, any time, before or without connecting a league |
 | **Viewing data** | Phase 1: the first feature built, before any league is connected |
 | **Making changes** | None. View only |
 | **Depends on** | [Data ETL & storage](infra-data-etl-and-storage.md), for NFL player data and weekly stats. No league needed. Signing in to the app is required, as for every screen ([ADR-0015](../design/decisions/ADR-0015-authenticate-users-with-firebase-authentication.md)) |
-| **Becomes** | The base for the player tables in [Waivers & trades](feature-waivers-and-trades.md) and [Weekly review & analytics](feature-weekly-review-and-analytics.md) |
+| **Becomes** | The base for the player tables in [Lineup management](feature-lineup-management.md), [Trades](feature-trades.md) and [Weekly review & analytics](feature-weekly-review-and-analytics.md) |
 
 ## The problem
 
@@ -30,14 +31,16 @@ And until a league is connected, the app has nothing to show.
 | Your sorting, filters, columns and scoring | Remembered between visits |
 | Stats after game nights | Loaded by the 06:00 Eastern daily run after each game (ETL spec D7), once nflverse has published them (open question below) |
 
+*Targets: **Owner-approved** (original PRD, baselined 2026-11-09) · **Uncalibrated** — no formal measurements recorded; methods and observation windows are defined at calibration.*
+
 ## Not doing
 
 | Not doing | Why not |
 | --- | --- |
-| Who owns a player, or whether he's a free agent | Needs a connected league; arrives with Waivers & trades |
+| Who owns a player, or whether he's a free agent | Needs a connected league; arrives with [Lineup management](feature-lineup-management.md) |
 | Your league's exact custom scoring | No league yet; standard scoring options until one is connected |
-| News articles in Phase 1 | Phase 1 shows each player's injury status only. News comes in a later phase, from a separate provider not yet chosen |
-| Projections in Phase 1 | No projection source in Phase 1: nflverse has none, and Sleeper's come only from an undocumented endpoint. Decided before Waivers & trades, which depends on them |
+| News articles in Phase 1 | Phase 1 shows each player's injury status only. News is its own PRD ([News & updates](feature-news-and-updates.md)); its provider is an open question there |
+| Projections in Phase 1 | No projection source in Phase 1: nflverse has none, and Sleeper's come only from an undocumented endpoint. The [Projections & rankings](feature-projections-and-rankings.md) model replaces the placeholder in its own phase |
 
 ## User stories
 
@@ -70,7 +73,7 @@ And until a league is connected, the app has nothing to show.
 | **Range switch**: the full season, or a custom range of weeks (for example weeks 4–9), with a per-game or totals toggle for counting stats | Applies to averages, totals, highs, lows and volatility. Fixed last-5 and last-3 windows were removed (owner, 2026-11-12) as they don't match how the list is used |
 | **Column chooser**: total points, points per game, high, low, volatility, games played, snap share, target share, next opponent and its difficulty, bye week, weekly trend line | Turning a column on or off doesn't reset the sort or filters |
 | **Player detail** | Clicking a player shows his stats and points for each week |
-| **Remembered settings** | Reopening the app restores sort, filters, columns, range and scoring. Stored per user account, not in the browser only ([ADR-0001](../design/decisions/ADR-0001-design-for-multiple-users-from-day-one.md); system design §0, row 1) |
+| **Remembered settings** | Reopening the app restores sort, filters, columns, range and scoring. Stored per user account, not in the browser only ([ADR-0001](../design/decisions/ADR-0001-design-for-multiple-users-from-day-one.md); system design §0, row 1). When the server can't be reached, the local mirror serves and changes sync when it returns (foundation spec F7) |
 
 ## Should have soon after
 
@@ -89,7 +92,7 @@ And until a league is connected, the app has nothing to show.
 
 | Idea | Why it's parked |
 | --- | --- |
-| Filters for "free agents in my league" and "on my teams" | Need connected leagues; come with Waivers & trades |
+| Filters for "free agents in my league" and "on my teams" | Need connected leagues; come with [Lineup management](feature-lineup-management.md) |
 | Your league's exact scoring applied to the whole list | Needs a connected league |
 | A watchlist that flags changes in status or role | Useful, but not needed to browse and sort |
 | Individual defensive players (DB, DL, LB) | Removed from Phase 1 (owner, 2026-11-17, spec PE5); return with an IDP league in a later phase |
@@ -102,13 +105,15 @@ And until a league is connected, the app has nothing to show.
 | Age of the player list and stats | Daily | Never more than 24 hours old |
 | How often you open the explorer | Each week | At least once |
 
+*Targets: **Owner-approved** (original PRD, baselined 2026-11-09) · **Uncalibrated** — no formal measurements recorded; methods and observation windows are defined at calibration.*
+
 ## Open questions
 
 | Question | Blocks building? | Who answers | Status |
 | --- | --- | --- | --- |
 | Which source gives every player's weekly stats? Answered: nflverse weekly player stats, team stats and snap counts, loaded by Data ETL & storage | Yes, answer first | Engineering | Answered |
 | How soon after each game do that source's stats become final? | No, answer during build | Engineering | Open |
-| Should kickers and team defenses share the main table, or get their own view, since their stats differ? Closed by default when presented to you on 2026-11-08 (Claude's recommendation): one main table with a position filter; filtering to K or team defense shows their own stat columns. Change it any time | No, answer during build | You | Answered |
+| Should kickers and team defenses share the main table, or get their own view, since their stats differ? Claude's 2026-11-08 proposal: one main table with a position filter; filtering to K or team defense shows their own stat columns. Ratified by the owner's PE3/PE4 decisions (2026-11-16, [player spec](../specs/ff-player-explorer-spec.md) §0.2), which explicitly approved the single season-switchable list with per-position column sets | No, answer during build | You | Approved (owner, via PE3/PE4) |
 | Should players outside active rosters (practice squad, unsigned) be included? Answered: no, unless they play (a player appears once he has a weekly stats row) | No, answer during build | You | Answered |
 
 ## Build order

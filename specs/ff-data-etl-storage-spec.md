@@ -1,9 +1,11 @@
 # Implementation Spec — Data ETL & Storage
 
-**Date:** 2026-11-17 · **Version:** v2.18 · **Status:** Draft. Every decision is recorded in §0.2; none is open.
+**Date:** 2026-11-18 · **Version:** v2.19 · **Status:** Draft. Every decision is recorded in §0.2; none is open.
 **Companion to:** the Data ETL & storage technical PRD, [`prds/infra-data-etl-and-storage.md`](../prds/infra-data-etl-and-storage.md).
 **Implements:** ADR-0001 to ADR-0013, and ADR-0017 for the operator query fields ([`design/architecture-decisions.md`](../design/architecture-decisions.md)).
 
+> **v2.19 (2026-11-18):** Governance correction, no behaviour change: D10 (structural checks block, value checks warn) and D12 (node-cron) were closed in 2026-11-08 on Claude's recommendation without explicit owner approval; the owner ratified both on 2026-11-18. Attribution preserved in §0.2, §8 and §12. Same day: §11.4's consensus-rankings paths dropped (owner: no third-party projection data is fetched; PRD Q11 closed).
+>
 > **v2.18 (2026-11-17):** Claude's correction after a live 2026 ingest failed loading play-by-play: `fumble_recovery_2_yards` carried a negative value, overflowing its `TINYINT UNSIGNED` column (the dictionary sized it from profiled seasons whose values happened to be 0-3). It and `lateral_rushing_yards` (same shape, same risk) are widened to `SMALLINT`, matching their `_1` siblings (dictionary rows 185 and 262; backend `sql/0013_play_signed_yardage.sql`).
 >
 > **v2.17 (2026-11-12):** Claude's corrections and hardening while implementing the load path and backfill, validated against freshly fetched files and a real load into an isolated MySQL schema. (1) Only primary-key columns are `NOT NULL`; every other column is nullable, because the data dictionary's 0.0%-empty figures are a single snapshot that live data violates (e.g. `player.height`/`weight`, several `play` clock/result columns). The load drops rows whose key is empty (§8). (2) `roster.draft_club` carries no foreign key: nflverse uses a different team-code vocabulary there (`AZ` for Arizona vs `team_abbr` `ARI`), so it can't reference `team` (§7.2.4). (3) Transport hardening (§4.2): the downloader follows redirects by hand with an https host allowlist (SSRF), bounds time-to-headers and inter-chunk idle (not a whole-download deadline), and caps download and gzip-decompressed bytes (bomb guard); `RELEASE_BASE` is now an environment variable (§4.1). (4) Staging is a session-scoped `TEMPORARY` table discarded when its connection closes, and an errored load destroys its connection (§5.3).
@@ -87,8 +89,8 @@ Also agreed (2026-11-06), not separate ADRs:
 | D6 | §5.2 | The current season is the NFL season in progress on today's date (owner). Between seasons, each dataset switches when nflverse publishes the new season: rosters on March 15; stats, snap counts, injuries, depth charts and play-by-play on the Wednesday after Labor Day. `CURRENT_SEASON` overrides it |
 | D7 | §9 | One scheduled run a day at 06:00 Eastern (owner) |
 | D9a | §7.2 | Load nflverse's team file as a `team` table, so every team code has a foreign key (owner) |
-| D10 | §8 | Structural checks block a load; value checks only warn. *Claude's recommendation; the owner didn't know* |
-| D12 | §12 | node-cron, as the scaffold already uses. *Claude's recommendation* |
+| D10 | §8 | Structural checks block a load; value checks only warn. *Claude's 2026-11-08 proposal, ratified by the owner 2026-11-18* |
+| D12 | §12 | node-cron, as the scaffold already uses. *Claude's proposal, ratified by the owner 2026-11-18* |
 
 ---
 
@@ -346,7 +348,7 @@ Each table's `CREATE TABLE` goes in a new `sql/000N_*.sql`, is run by hand (ADR-
 
 Runs inside each load, before a piece is marked `loaded` (ADR-0006).
 
-**Rule (D10; Claude's recommendation, the owner didn't know):** structural checks block a load, so the previous good data stays in place; value checks load the new data and record a warning in `job_run`.
+**Rule (D10; Claude's proposal, ratified by the owner 2026-11-18):** structural checks block a load, so the previous good data stays in place; value checks load the new data and record a warning in `job_run`.
 
 | Check | Effect |
 |---|---|
@@ -402,7 +404,7 @@ Default The Odds API (`https://api.the-odds-api.com/v4`, `apiKey`): game lines f
 
 ### 11.4 Rankings and FantasyPros
 
-Free path: nflverse `ff_rankings`. Keyed path: FantasyPros consensus rankings (`x-api-key`). Projections are produced downstream (modelling), out of Phase 1 (Data ETL & storage PRD, Q11).
+Dropped (owner, 2026-11-18): no third-party projection or rankings data is fetched — rankings come from the app's own model (the Projections & rankings PRD). The research into nflverse `ff_rankings` and FantasyPros (`x-api-key`) is kept above for the record; Q11 is closed in the Data ETL & storage PRD.
 
 ### 11.5 Snapshot archiver
 
@@ -428,7 +430,7 @@ v1.1 added a `source_health` table (OK / Out of date / Broken / Reconnect needed
 | Scheduler | `node-cron` | D12 |
 | Run lock | MySQL `GET_LOCK` | ADR-0006 |
 
-**Scheduler (D12; Claude's recommendation):** node-cron, as the scaffold already uses: it is maintained, ships its own types and runs on wall-clock time in a named zone. The earlier version of ADR-0008 cited node-schedule, whose last release is about three years old.
+**Scheduler (D12; Claude's proposal, ratified by the owner 2026-11-18):** node-cron, as the scaffold already uses: it is maintained, ships its own types and runs on wall-clock time in a named zone. The earlier version of ADR-0008 cited node-schedule, whose last release is about three years old.
 
 ## 13. Sequencing
 

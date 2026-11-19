@@ -6,15 +6,15 @@ Every planning document for Runpure FF (Fantasy Workbench): PRDs, system design,
 
 | Path | What it is |
 |---|---|
-| `prds/` | Product requirements: the Overview, four feature PRDs and two technical PRDs (Platform connections, Data ETL & storage) |
+| `prds/` | Product requirements: the Overview (with the shared product contract and deferred features), eight feature PRDs and two technical PRDs (Platform connections, Data ETL & storage) |
 | [`design/system-design.md`](design/system-design.md) | How the parts fit together; points to the ADR behind every choice |
 | [`design/architecture-decisions.md`](design/architecture-decisions.md) | Decision log: every ADR with its status, plus open questions |
-| `design/decisions/` | One file per architecture decision (ADR-0001 to ADR-0017) |
+| `design/decisions/` | One file per architecture decision (ADR-0001 onward) |
 | [`design/interface-design-brief.md`](design/interface-design-brief.md), [`design/design-language.md`](design/design-language.md), [`design/tokens.css`](design/tokens.css) | The design direction (how it should look, behave and flow) and the visual system: design tokens, colour, type, accessibility |
 | [`governance/documentation-suite.md`](governance/documentation-suite.md) | Which documents exist, where they live, and how they change |
 | [`governance/templates.md`](governance/templates.md) | Templates for ADRs, PRDs, the system design and the test & deployment plan; ADR rules and lifecycle |
-| `design/reviews/` | Dated records of decision reviews (the 2026-11-08 open-decisions review) |
-| `specs/` | Implementation specs: the Data ETL & storage spec and its data dictionary (Appendix A) |
+| `design/reviews/` | Dated working records: decision reviews, the Phase 1 remaining-work tracker, external PRD reviews |
+| `specs/` | Implementation specs: Data ETL & storage (with its data dictionary), the frontend foundation, the Player explorer and the NFL scores & schedule |
 | `research/` | Research behind the decisions, with sources |
 | `prototypes/` | Working mock-ups on sample data; `ff-workbench-sample-data.html` is the Weekly review & analytics working version (open it in a browser) |
 | [`AGENTS.md`](AGENTS.md), [`CLAUDE.md`](CLAUDE.md) | The rules every agent follows here (CLAUDE.md imports AGENTS.md) |

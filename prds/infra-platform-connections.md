@@ -2,12 +2,13 @@
 
 **Brings every league from Sleeper, Yahoo and ESPN into one place, and tells you exactly what the app can and can't do in each one.**
 
-**Last updated:** 2026-11-12 · reviewed against ADR-0008 (no change needed). 2026-11-09: · moved from the online PRD doc; links updated. Shared platform facts and terms: [Overview](00-overview.md).
+**Last updated:** 2026-11-18 · aligned to the Overview's capability-contract and verified-platform-action terms (owner's 2026-11-18 shared contract). Earlier 2026-11-12 · reviewed against ADR-0008 (no change needed). 2026-11-09: · moved from the online PRD doc; links updated. Shared platform facts and terms: [Overview](00-overview.md).
 
 ## At a glance
 
 |  |  |
 | --- | --- |
+| **Status** | **Requirements** — PRD written; no spec or code. Next major milestone after the Firebase auth work (opens the Viewing phase) |
 | **Serves** | Every league-based journey. No league feature works until this does |
 | **Viewing data** | Viewing phase (after Phase 1) |
 | **Making changes** | Changes phase: Yahoo first, then Sleeper |
@@ -29,6 +30,8 @@ Each platform also allows different things. Without a layer that knows those lim
 | Data is fresh the rest of the week | No more than 15 minutes old |
 | A broken connection is never shown as current data | Flagged within one refresh |
 | Changes you make appear in each platform's own app | Every change checked against the platform afterwards |
+
+*Targets: **Owner-approved** (original PRD, baselined 2026-11-09) · **Uncalibrated** — no formal measurements recorded; methods and observation windows are defined at calibration.*
 
 ## Not doing
 
@@ -60,7 +63,7 @@ Each platform also allows different things. Without a layer that knows those lim
 
 | Requirement | Done when |
 | --- | --- |
-| **One shared data model** for leagues, teams, roster slots, players, matchups, transactions, scoring rules and what each league allows | Every screen reads from this model only, never from a platform directly |
+| **One shared data model** for leagues, teams, roster slots, players, matchups, transactions, scoring rules and what each league allows (the Overview's per-capability **capability contract**) | Every screen reads from this model only, never from a platform directly; each capability carries supported / unsupported / unknown / temporarily unavailable with its last verified time |
 | **Sleeper: view data** using your username and Sleeper's official public API | Typing a username loads every current-season league with rosters, matchups and settings. The full player list is fetched at most once a day. Requests stay under Sleeper's limit of 1,000 a minute |
 | **Yahoo: view data** through Yahoo's official sign-in | After approving access on Yahoo's page, leagues load and stay connected without asking again |
 | **ESPN: view data** using your two ESPN cookies | Valid cookies load your private leagues. Expired cookies show "Reconnect needed" on the league |
@@ -73,7 +76,7 @@ Each platform also allows different things. Without a layer that knows those lim
 
 | Requirement | Done when |
 | --- | --- |
-| **Yahoo: make changes** (set lineup, add and drop players) | After you confirm, the app sends the change, re-reads the roster from Yahoo, and shows success only if Yahoo matches |
+| **Yahoo: make changes** (set lineup, add and drop players) | Follows the Overview's **verified platform action** states: after you confirm, the app sends the change, re-reads the roster from Yahoo, and shows success only on a matching read-back; ambiguous outcomes stay visibly unresolved and are never retried automatically |
 | **Sleeper: make changes** using a pasted Sleeper sign-in token, behind an "Allow changes" switch | Every change shows a confirmation listing exactly what will change |
 | **Change history** | Every attempted change is logged with time, league, what changed and whether it worked |
 
@@ -93,6 +96,8 @@ Each platform also allows different things. Without a layer that knows those lim
 | Times out-of-date data was shown without a warning | Ongoing | Zero |
 | Weeks with a connection broken for over 24 hours | Across the season | Fewer than 2 |
 | Confirmed changes that matched the platform afterwards | Across the season | All of them |
+
+*Targets: **Owner-approved** (original PRD, baselined 2026-11-09) · **Uncalibrated** — no formal measurements recorded; methods and observation windows are defined at calibration.*
 
 ## Open questions
 
