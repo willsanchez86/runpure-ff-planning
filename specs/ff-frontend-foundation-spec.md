@@ -65,7 +65,7 @@ Not yet decided. Accepting this spec accepts these unless the owner changes them
 - The Next.js server process serves pages and static assets only — no API routes, no server actions, no server-side data fetching (P3).
 - Fantasy points and derived stats are computed here, from stat lines (ADR-0007, §11). The API never returns a fantasy-point number.
 
-**Repository:** `runpure-ff-frontend` (local folder `runpure-ff-FRONTEND`), the third repo in system design §6. It carries the code-repo kit (AGENTS.md rules, PR template, planning-refs check).
+**Repository:** `runpure-ff-frontend` (local folder `runpure-ff-FRONTEND`), the third repo in system design §8. It carries the code-repo kit (AGENTS.md rules, PR template, planning-refs check).
 
 ## 2. Architecture
 
@@ -182,7 +182,7 @@ Composability rule: `features/*` may import from `components/`, `lib/` and `styl
 
 - **Google sign-in + passwordless email link** (F4 as revised by ADR-0021): Google via `signInWithPopup`, falling back to redirect where popups are blocked; the email-link flow arrives with the auth milestone. The sign-in screen keeps the prototype's layout minus the password form and Apple button, with the invite-only note.
 - **Auth context** wraps the app: current Firebase user, a cached `getIdToken()` for the data layer, sign-out. The account menu in the top bar shows name/email and Sign out, as in the prototype.
-- **Guards:** no Firebase user → `/sign-in`. Signed in but `me` returns null (no app account row — accounts are created manually, system design §3) → the "account isn't set up" screen: plain message, sign-out, **no data fetched**.
+- **Guards:** no Firebase user → `/sign-in`. Signed in but `me` returns null (no app account row — accounts are created manually, system design §4) → the "account isn't set up" screen: plain message, sign-out, **no data fetched**.
 - Every GraphQL request carries `Authorization: Bearer <ID token>`; a 401/invalid-token response signs the user out locally and returns to `/sign-in`.
 - The operator-only fields (`pipelineRuns`, `ingestLedger`) get **no UI in Phase 1**; operators use GraphQL directly.
 
@@ -193,7 +193,7 @@ Composability rule: `features/*` may import from `components/`, `lib/` and `styl
 One module, ~150 lines, owned and tested here:
 
 1. `gqlRequest(document, variables)` — looks up the operation's SHA-256 hash in the generated persisted-documents manifest, POSTs `{ variables, extensions: { persistedQuery: { sha256Hash } } }` (the APQ format the backend's store expects), with the ID token header.
-2. Unwraps the GraphQL envelope: a non-empty `errors` array is a failure even on HTTP 200 (ADR-0017); the operation name and errors are logged (system design §4).
+2. Unwraps the GraphQL envelope: a non-empty `errors` array is a failure even on HTTP 200 (ADR-0017); the operation name and errors are logged (system design §5).
 3. Returns data typed by the generated types — no `any` crosses this boundary.
 
 ### 6.2 Contract workflow (ADR-0016, P5)

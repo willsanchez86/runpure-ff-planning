@@ -173,7 +173,7 @@ All computed by the foundation's scoring engine (§11 there) over the fetched st
 
 ## 9. Required GraphQL contract
 
-Additions the backend authors (code-first; additive; lists capped — system design §4). Field names are indicative; the committed SDL wins.
+Additions the backend authors (code-first; additive; lists capped — system design §5). Field names are indicative; the committed SDL wins.
 
 ### 9.1 Players and teams
 

@@ -193,45 +193,85 @@ File: `prds/feature-<name>.md` for a feature, `prds/infra-<name>.md` for a techn
 
 ## 3. System Architecture & Design Document (SADD)
 
-File: [`design/system-design.md`](../design/system-design.md) (one per system). It records how the parts fit together and points to the ADR behind every choice; it decides nothing itself.
+File: [`design/system-design.md`](../design/system-design.md) (one per system). It records how the parts fit together and cites the ADR behind every choice; it decides nothing itself. Structure revised 2026-11-19 (owner-approved), informed by arc42's canonical per-section guidance (Contents/Motivation/Form at [docs.arc42.org](https://docs.arc42.org/home/)) tailored to this project — tailoring is arc42's own advice; mapping and gap analysis: [`research/sadd-template-best-practices-research-2026-11-19.md`](../research/sadd-template-best-practices-research-2026-11-19.md).
+
+**Document rules**
+
+- **Table of contents required**, linking to every section; **change log at the end**, newest entry first.
+- **Readable in isolation:** every statement carries its content inline, with the deciding record as a parenthetical citation — a reader must never need to open a link to understand a sentence.
+- **Document-once:** shared terms and the glossary live on the PRD Overview; feature behaviour lives in PRDs; build detail lives in specs. This document links to them and never restates them.
+- **It decides nothing:** every choice cites its ADR (or names where the open question is tracked). Targets carry the two labels from §2's PRD rules (Approval × Measurement).
+
+Each section below states what it contains and what it must **not** contain (and where that content lives instead).
+
+| § | Section | Contains | Does **not** contain |
+|---|---|---|---|
+| — | Contents | Linked TOC, one line per section | Prose |
+| 1 | **System overview** | A one-paragraph summary a newcomer can read first; the context diagram (every deployable and external service); a component table (one-line responsibility + deciding ADR each); the numbered runtime data flow; any boundary rules between components | Requirements; justifications or rejected alternatives (ADRs); configuration and code detail (specs) |
+| 2 | **Requirements** | Functional scope summarised from the PRDs; the non-functional table with a source per row — quality goals drive the document; constraints; the load estimate with measurement provenance | Feature acceptance criteria (PRDs); unlabeled or unsourced targets; aspirations with no owning record |
+| 3 | **Design guardrails** | Firm crosscutting rules the owner set, each with why it avoids rework, how it is met (cited), and the exception process | Aspirational principles not actually binding; implementation detail; anything without an owner decision behind it |
+| 4 | **Technology decisions** | One row per decided question: question → answer → ADR; then the "not decided" list naming where each open item is tracked | Rationale and rejected options (the ADR owns those); any decision lacking an ADR where the ADR rule applies; product scope (PRDs) |
+| 5 | **Data ownership and API design** | Which component owns and writes each data family, and its store; API rules that bind across features (auth, contract, limits, deprecation); error-handling conventions | Table schemas and column lists (specs); per-field API documentation (the committed schema is the contract); screen behaviour (PRDs) |
+| 6 | **Hosting and deployment requirements** | What any hosting option must satisfy, derived from the architecture; the workload profile with measurement provenance; the owner's dated selection constraints; once hosting is decided, the deployment topology — which building block runs on which infrastructure (arc42 §7's software-to-infrastructure mapping) | Provider comparisons (research documents); the chosen provider's rationale (its ADR); deployment steps (the MTDP) |
+| 7 | **Reliability and operations** | Failure modes with their recovery paths; monitoring posture; backup posture; the pre-deployment hardening checklist | Test plans and release checks (MTDP); incident history and work items (the designated tracker) |
+| 8 | **Repositories and shared artifacts** | The repository table (holds / deploys) and every artifact shared between repos, with its synchronisation rule | Directory layouts and build commands (each repo's README) |
+| 9 | **Trade-offs accepted** | The closed list: what was consciously given up, citing the deciding ADR | Open risks (§10); regrets without a deciding record |
+| 10 | **Risks and technical debt** | The open register, prioritized (arc42 §11 form): known risks and owed work — each with impact, a suggested mitigation or measure, the trigger to act, and where it is tracked | Accepted trade-offs (§9); the work items themselves (the tracker owns execution); product backlog (PRDs) |
+| 11 | **Growth triggers** | Condition → response pairs: what change in scale or need activates what prepared path | Speculative features (PRD "Later" tables); dates or commitments |
+| 12 | **Change log** | Dated, versioned entries, newest first, each saying what changed and why | Content that exists only here — a change is made in its section and recorded here, never only logged; future plans |
+
+**Optional elements (include only on owner request — arc42 canon, verbatim form)**
+
+- **Stakeholders table** (arc42 §1.3), added under §2 Requirements when the project has more than one party: columns **Role/Name | Contact | Expectations** — "all person, roles or organizations that should know the architecture, need convincing of it, work with the code, require documentation for their work, or make decisions about the system." Omitted by default here because there is one stakeholder, the owner. ([docs.arc42.org/section-1](https://docs.arc42.org/section-1/))
+- **Multi-level building-block view** (arc42 §5), replacing §1's flat component table when the system outgrows it: Level 1 = "the white box description of the overall system together with black box descriptions of all contained building blocks"; Level 2 zooms into selected level-1 blocks; Level 3 onward likewise. A **white box** carries an overview diagram, the motivation for the decomposition, and black-box descriptions of its contained blocks; a **black box** carries Purpose/Responsibility, Interface(s), and optionally quality characteristics, location, fulfilled requirements, open issues. arc42's own advice: "relevance over completeness." ([docs.arc42.org/section-5](https://docs.arc42.org/section-5/))
+- **Multi-level deployment view** (arc42 §7), extending §6 when infrastructure nests: Infrastructure Level 1 (overall topology: locations, environments, nodes, channels) and Level 2 zooms into selected nodes; include the software-to-infrastructure mapping at each level. ([docs.arc42.org/section-7](https://docs.arc42.org/section-7/))
+
+**Blank skeleton**
 
 ````markdown
 # System Design — [Project Name]
 
 **Status:** Draft vN.N · **Owner:** [Name] · **Date:** YYYY-MM-DD
-**vN.N (YYYY-MM-DD):** [what changed]
-**Purpose:** [one line]
-**Inputs:** [PRDs, specs, decision log]
+**Purpose:** [one line] **Inputs:** [PRDs, specs, decision log]
 
-## 0. Guardrail
-| # | Requirement | Why it avoids rework | How it's met (ADR) |
-|---|---|---|---|
+## Contents
+[Linked TOC]
 
-## 1. Requirements
-[Functional scope from the PRDs; non-functional targets with their sources; constraints; load estimate]
+## 1. System overview
+[Summary paragraph; context diagram; component table (| Component | What it does | Decided in |); boundary rules; numbered data flow]
 
-## 2. High-level design
-[Diagram (Mermaid); component table with the ADR that decides each; boundary rule; numbered data flow]
+## 2. Requirements
+[Functional summary; non-functional table (| Requirement | Target | Source |); constraints; load estimate with provenance]
 
-## 3. Decisions this design rests on
-| Question | Answer | ADR |
-|---|---|---|
-[Then: what is not decided yet, and where it's tracked]
+## 3. Design guardrails
+[| # | Requirement | Why it avoids rework | How it's met (ADR) | — plus allowances and the exception process]
 
-## 4. Deep dive
-[Data ownership table; API (style, contract, auth, limits); error handling]
+## 4. Technology decisions
+[| Question | Answer | ADR | — then "Not decided (tracked elsewhere)"]
 
-## 5. Reliability and monitoring
+## 5. Data ownership and API design
+[| Data | Owner | Store | — then API rules; error-handling conventions]
 
-## 6. Repositories
-| Repository | Holds | Deploys |
-|---|---|---|
+## 6. Hosting and deployment requirements
+[Stack; deployables; hard requirements; workload profile; owner constraints (dated)]
 
-## 7. Trade-offs accepted
-| Choice | Gives up | ADR |
-|---|---|---|
+## 7. Reliability and operations
+[Failure handling; monitoring; backups; pre-deployment hardening list]
 
-## 8. Revisit as it grows
+## 8. Repositories and shared artifacts
+[| Repository | Holds | Deploys | — then shared artifacts and their sync rules]
+
+## 9. Trade-offs accepted
+[| Choice | Gives up | ADR |]
+
+## 10. Risks and technical debt
+[| Item | Type (risk/debt) | Impact | Mitigation / measure | Trigger to act · tracked where | — prioritized, worst first]
+
+## 11. Growth triggers
+[Condition → response pairs]
+
+## 12. Change log
+[- **vN.N (YYYY-MM-DD):** what changed and why — newest first]
 ````
 
 ## 4. Master Test & Deployment Plan (MTDP)

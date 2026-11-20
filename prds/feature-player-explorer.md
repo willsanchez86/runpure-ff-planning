@@ -73,7 +73,7 @@ And until a league is connected, the app has nothing to show.
 | **Range switch**: the full season, or a custom range of weeks (for example weeks 4–9), with a per-game or totals toggle for counting stats | Applies to averages, totals, highs, lows and volatility. Fixed last-5 and last-3 windows were removed (owner, 2026-11-12) as they don't match how the list is used |
 | **Column chooser**: total points, points per game, high, low, volatility, games played, snap share, target share, next opponent and its difficulty, bye week, weekly trend line | Turning a column on or off doesn't reset the sort or filters |
 | **Player detail** | Clicking a player shows his stats and points for each week |
-| **Remembered settings** | Reopening the app restores sort, filters, columns, range and scoring. Stored per user account, not in the browser only ([ADR-0001](../design/decisions/ADR-0001-design-for-multiple-users-from-day-one.md); system design §0, row 1). When the server can't be reached, the local mirror serves and changes sync when it returns (foundation spec F7) |
+| **Remembered settings** | Reopening the app restores sort, filters, columns, range and scoring. Stored per user account, not in the browser only ([ADR-0001](../design/decisions/ADR-0001-design-for-multiple-users-from-day-one.md); system design §3, row 1). When the server can't be reached, the local mirror serves and changes sync when it returns (foundation spec F7) |
 
 ## Should have soon after
 

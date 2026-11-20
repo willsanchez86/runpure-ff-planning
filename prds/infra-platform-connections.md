@@ -69,7 +69,7 @@ Each platform also allows different things. Without a layer that knows those lim
 | **ESPN: view data** using your two ESPN cookies | Valid cookies load your private leagues. Expired cookies show "Reconnect needed" on the league |
 | **One record per real player** across all three platforms | A player on two platforms shows once, with both rosters listed. Unmatched players are listed for you to match by hand, never dropped |
 | **Connection health** for each platform | Each shows its last successful update and a status: OK, Out of date, Broken or Reconnect needed. Out-of-date data is visibly marked |
-| **Sign-ins held by the Express backend** ([ADR-0008](../design/decisions/ADR-0008-run-the-api-and-pipeline-in-a-separate-express-backend.md)), per user | Sign-ins are stored encrypted, with the key outside the database (system design §0, row 4), and never sent to the browser |
+| **Sign-ins held by the Express backend** ([ADR-0008](../design/decisions/ADR-0008-run-the-api-and-pipeline-in-a-separate-express-backend.md)), per user | Sign-ins are stored encrypted, with the key outside the database (system design §3, row 4), and never sent to the browser |
 | Live game-day refresh: during game windows, poll each connected league's live matchups and scores on all three platforms; set lock status from kickoff times; refresh game-day player status. Moved here from Data ETL & storage | Live values no more than 60 seconds old during games; each platform's rate limit respected; replaced by final data once games end |
 
 ## Should have soon after

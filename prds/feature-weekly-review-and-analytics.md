@@ -67,7 +67,7 @@ The views already work on made-up data. This page defines them properly so they 
 | **Team and player tables** with a column chooser, range switch and sorting. The player table filters by position and by who owns the player | Every column's tooltip matches its definition on the [Overview](00-overview.md) |
 | **Player comparison**: up to four players on one weekly chart, with next week's projection | Missed weeks show as breaks in the line |
 | **Gaps, not zeros** for missed games and byes in every average, chart and small trend line | A player who missed week 3 has his average divided by games actually played |
-| **Remembered settings**: columns, ranges, filters and selected league | Reopening the app restores them. Stored per user account, not in the browser only ([ADR-0001](../design/decisions/ADR-0001-design-for-multiple-users-from-day-one.md); system design §0, row 1) |
+| **Remembered settings**: columns, ranges, filters and selected league | Reopening the app restores them. Stored per user account, not in the browser only ([ADR-0001](../design/decisions/ADR-0001-design-for-multiple-users-from-day-one.md); system design §3, row 1) |
 
 ## Should have soon after
 
