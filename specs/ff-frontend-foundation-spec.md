@@ -65,7 +65,7 @@ Not yet decided. Accepting this spec accepts these unless the owner changes them
 - The Next.js server process serves pages and static assets only — no API routes, no server actions, no server-side data fetching (P3).
 - Fantasy points and derived stats are computed here, from stat lines (ADR-0007, §11). The API never returns a fantasy-point number.
 
-**Repository:** `runpure-ff-frontend` (local folder `runpure-ff-FRONTEND`), the third repo in system design §6. It carries the code-repo kit (AGENTS.md rules, PR template, planning-refs check).
+**Repository:** `runpure-ff-frontend` (local folder `runpure-ff-FRONTEND`), the third repo in system design §8. It carries the code-repo kit (AGENTS.md rules, PR template, planning-refs check).
 
 ## 2. Architecture
 
@@ -182,7 +182,7 @@ Composability rule: `features/*` may import from `components/`, `lib/` and `styl
 
 - **Google sign-in + passwordless email link** (F4 as revised by ADR-0021): Google via `signInWithPopup`, falling back to redirect where popups are blocked; the email-link flow arrives with the auth milestone. The sign-in screen keeps the prototype's layout minus the password form and Apple button, with the invite-only note.
 - **Auth context** wraps the app: current Firebase user, a cached `getIdToken()` for the data layer, sign-out. The account menu in the top bar shows name/email and Sign out, as in the prototype.
-- **Guards:** no Firebase user → `/sign-in`. Signed in but `me` returns null (no app account row — accounts are created manually, system design §3) → the "account isn't set up" screen: plain message, sign-out, **no data fetched**.
+- **Guards:** no Firebase user → `/sign-in`. Signed in but `me` returns null (no app account row — accounts are created manually, system design §4) → the "account isn't set up" screen: plain message, sign-out, **no data fetched**.
 - Every GraphQL request carries `Authorization: Bearer <ID token>`; a 401/invalid-token response signs the user out locally and returns to `/sign-in`.
 - The operator-only fields (`pipelineRuns`, `ingestLedger`) get **no UI in Phase 1**; operators use GraphQL directly.
 
@@ -193,7 +193,7 @@ Composability rule: `features/*` may import from `components/`, `lib/` and `styl
 One module, ~150 lines, owned and tested here:
 
 1. `gqlRequest(document, variables)` — looks up the operation's SHA-256 hash in the generated persisted-documents manifest, POSTs `{ variables, extensions: { persistedQuery: { sha256Hash } } }` (the APQ format the backend's store expects), with the ID token header.
-2. Unwraps the GraphQL envelope: a non-empty `errors` array is a failure even on HTTP 200 (ADR-0017); the operation name and errors are logged (system design §4).
+2. Unwraps the GraphQL envelope: a non-empty `errors` array is a failure even on HTTP 200 (ADR-0017); the operation name and errors are logged (system design §5).
 3. Returns data typed by the generated types — no `any` crosses this boundary.
 
 ### 6.2 Contract workflow (ADR-0016, P5)
@@ -259,7 +259,7 @@ type DataFreshness { playersLoadedAt: String, statsLoadedAt: String, gamesLoaded
 
 Ported from the prototype's shell, as components:
 
-- **Left nav:** brand block; Browse → Players, NFL; "Coming later" → Game day, Waivers & trades, Weekly review, Leagues as non-clickable, `aria-disabled` items with a "soon" tag (no dead ends); the dashed league-picker placeholder ("No leagues connected"). Collapses to a horizontal bar ≤980 px.
+- **Left nav:** brand block; Browse → Players, NFL; "Coming later" → Lineup, Trades, Weekly review, Leagues (renamed with the 2026-11-18 PRD restructure; the built nav's labels follow in the next frontend change) as non-clickable, `aria-disabled` items with a "soon" tag (no dead ends); the dashed league-picker placeholder ("No leagues connected"). Collapses to a horizontal bar ≤980 px.
 - **Top bar:** freshness note (from `dataFreshness`; amber + banner when stale), account chip + menu.
 - **Overlay manager:** one scrim overlay at a time (card / compare / columns); `role="dialog"`, `aria-modal`, ESC closes, scrim-click closes, focus is trapped and returned. Non-scrim popovers (account menu, dropdowns) close on outside click/ESC.
 - **Tooltip system:** single tooltip root, shows on hover **and focus**, ESC-dismissable (WCAG 1.4.13), `aria-live` where the prototype uses it (match count).
@@ -275,10 +275,10 @@ Ported from the prototype's shell, as components:
 | Range aggregates: total, PPG (÷ games played), high, low, volatility (sd, min 3 games) | Overview Shared terms; design language |
 | Positional and overall ranks, per week and cumulative | Prototype behavior |
 | Fantasy points allowed per defense/position → matchup difficulty (rank 1–32; ≤8 Tough, ≥25 Easy) | Overview Shared terms |
-| Placeholder projection | Overview Shared terms (placeholder until the projections decision) |
+| Placeholder projection | Overview Shared terms (placeholder until the Projections & rankings model ships — its own phase; owner, 2026-11-18) |
 | Weekly trend; gaps for byes/missed weeks (never zeros) | Brief; design language |
 
-**Performance budget:** ~1,250 players × ≤18 weeks ≈ 20–25k stat lines in memory; a full recompute (points → ranks → FPA → aggregates) targets <150 ms on desktop, memoized by (scoring config, range). This meets the PRD's "re-sort/re-filter under half a second" and "points recalculate instantly".
+**Performance budget:** measured 2026-11-17 on the live contract: ~6,900 players served per season (most without stat lines) and ~9k regular-season stat lines mid-season — on the order of 15–20k over a full season, in line with the original ~20–25k budget; a full recompute (points → ranks → FPA → aggregates) targets <150 ms on desktop, memoized by (scoring config, range). This meets the PRD's "re-sort/re-filter under half a second" and "points recalculate instantly".
 
 **Tests:** golden-case unit tests per position and per scoring option — the cost ADR-0007 accepted ("the app holds and tests scoring logic") is paid here.
 

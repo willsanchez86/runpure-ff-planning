@@ -62,7 +62,7 @@ Every calculated measure uses its shared definition from the [Overview PRD](../p
 
 - **Matchup difficulty** — the opponent's rank for fantasy points allowed per game to that position (1st = fewest allowed, 32nd = most). 25th or worse is *Easy*; 8th or better is *Tough*. Shown as the rank with a colour-coded dot; the Easy/Even/Tough word is carried in the label/tooltip for assistive tech.
 - **Volatility** — standard deviation of weekly points over games actually played, minimum 3 games.
-- **Projection** — a placeholder only, labelled as an estimate; no Phase 1 data source.
+- **Projection** — a placeholder only, labelled as an estimate; no Phase 1 data source. The app's own model replaces it in the Projections phase ([Projections & rankings PRD](../prds/feature-projections-and-rankings.md)).
 
 **Formatting rules:** fantasy points to one decimal; an average always sits beside games played (`14.2 · 11 GP`); the matchup rank is shown with its difficulty cue; byes and missed weeks are gaps, not zeros; averages divide by games actually played.
 

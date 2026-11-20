@@ -1,59 +1,27 @@
 # System Design — Fantasy Workbench (Runpure FF)
 
-**Status:** Draft v2.2 · **Owner:** William Sanchez · **Date:** 2026-11-16
-**v2.2 (2026-11-16):** frontend construction decisions added to §3 (ADR-0018 to ADR-0020, from the frontend specs `specs/ff-frontend-foundation-spec.md`, `specs/ff-player-explorer-spec.md`, `specs/ff-nfl-scores-and-schedule-spec.md`).
-**v2.1 (2026-11-10):** §8 lists what to consider before the first deployment, from the 2026-11-10 security review of the backend setup script (owner: defer to the deployment phase).
-**v2.0 (2026-11-09):** rewritten to match the accepted ADRs (ADR-0001 to ADR-0017). Removed: DuckDB, the storage bucket and its snapshot layout, Parquet and mart files, GitHub Actions as the pipeline host, Postgres and SQLite, the single repository, and the medallion layer names. The guardrail's ten requirements (§0) are kept word for word as the owner set them; a new column says how each is met now.
-**v1.0–v1.4 (2026-11-05):** first drafts, written before the ADRs; superseded by v2.0.
-**Purpose:** how the system is put together: components, boundaries, data flow, and how the multi-user guardrail is met. Each choice is decided in an ADR (`design/decisions/`); this document puts them in one picture and links to them. It decides nothing itself.
-**Inputs:** PRDs (`prds/`), [`specs/ff-data-etl-storage-spec.md`](../specs/ff-data-etl-storage-spec.md), decision log [`design/architecture-decisions.md`](architecture-decisions.md).
+**Status:** Draft v2.6 · **Owner:** William Sanchez · **Date:** 2026-11-19
+**Purpose:** how the system is put together: components, boundaries, data flow, and how the multi-user guardrail is met. Each choice is decided in an ADR (`design/decisions/`); this document puts them in one picture and cites them inline. It decides nothing itself.
+**Inputs:** PRDs (`prds/`), [`specs/ff-data-etl-storage-spec.md`](../specs/ff-data-etl-storage-spec.md), decision log [`design/architecture-decisions.md`](architecture-decisions.md). The change log is at the end (§12).
 
----
+## Contents
 
-## 0. Guardrail: multi-user ready, no rework (firm, ADR-0001)
+1. [System overview](#1-system-overview) — what it is, the diagram, components, data flow
+2. [Requirements](#2-requirements) — functional, non-functional, constraints, load
+3. [Design guardrail: multi-user ready, no rework](#3-design-guardrail-multi-user-ready-no-rework)
+4. [Technology decisions](#4-technology-decisions) — every decided question, and what is not decided
+5. [Data ownership and API design](#5-data-ownership-and-api-design)
+6. [Hosting and deployment requirements](#6-hosting-and-deployment-requirements)
+7. [Reliability and operations](#7-reliability-and-operations) — failure handling, and the pre-deployment hardening list
+8. [Repositories and shared artifacts](#8-repositories-and-shared-artifacts)
+9. [Trade-offs accepted](#9-trade-offs-accepted) — closed: consciously given up
+10. [Risks and technical debt](#10-risks-and-technical-debt) — open: known risks and owed work
+11. [Growth triggers](#11-growth-triggers)
+12. [Change log](#12-change-log)
 
-**Rule:** the app launches with one user (you), but no design decision may require significant rework to serve many users. Start with a small deployment (one host, one instance) but never a single-user design. Growing to more users should mean adding resources (more instances, a bigger database, a separate worker), never changing the data model, the component boundaries or the code structure.
+## 1. System overview
 
-| # | Requirement | Why it avoids rework | How it's met |
-|---|---|---|---|
-| 1 | **A `users` table, and every account-owned row carries a `user_id`**: platform connections, sign-ins, leagues followed, settings, change log, preferences. You are user 1 | Adding ownership to every table and query later is the most expensive retrofit there is | `users` table in MySQL keyed to the Firebase `uid` (ADR-0015, ADR-0005) |
-| 2 | **Real user accounts and login**, even with one account. No shared password or "access restricted to me" shortcut | Replacing an auth shortcut touches every endpoint | Firebase Authentication; every request carries an ID token (ADR-0015, ADR-0014) |
-| 3 | **Every API request is scoped to the signed-in user.** No endpoint returns data without checking ownership | Retrofitting authorization means auditing every query | Token middleware puts the user in the GraphQL context; authorization lives in the services (ADR-0015, ADR-0017) |
-| 4 | **Sign-ins stored per user, encrypted**, with the key outside the database | Per-user credentials are already the shape multi-user needs | Applies when platform connections are built (later phase) |
-| 5 | **Stateless app server:** sessions, caches that matter and job state live in the database or bucket, never in process memory or on local disk | Lets a second instance run behind a load balancer with no code change | MySQL only, no bucket (ADR-0005). Job state in `ingest_ledger` and `job_run`; the run lock is a MySQL named lock (ADR-0006) |
-| 6 | **Background work (league sync, live poller, mart load) runs as jobs separate from the web request path**, keyed by league rather than by user, so a league shared by two users is polled once | The worker can move to its own process or machine without a rewrite | Each job has its own entry point that the scheduler only calls, so jobs can move to a worker (ADR-0008). "Marts" are now the MySQL app tables (ADR-0005) |
-| 7 | **The serving database must handle concurrent writes from more than one process and machine** | Required by rows 5 and 6 once there is more than one instance | MySQL (ADR-0005) |
-| 8 | **Platform calls go through one rate-limit budget per platform**, not per request or per user | Prevents more users from turning into blocked accounts | Applies when platform connections are built (later phase) |
-| 9 | **Shared data is computed once for everyone:** NFL data and marts are league-agnostic; league scoring is cached per league | Cost grows with leagues, not with users × screens | nflverse tables are shared reference data (ETL spec §0.1); points are calculated in the app from stored stats (ADR-0007) |
-| 10 | **Schema changes only through migrations; contracts (mart schemas, API responses) are versioned** | Changes can roll out without breaking running instances or other users | Changed how it's met, not whether. Database: hand-applied statements kept in order in `sql/`, not a migration tool (ADR-0011). API: no version numbers; GraphQL schema evolution with `@deprecated` and a breaking-change check in CI (ADR-0016, ADR-0017) |
-
-**What can stay small at launch** (scale the deployment, not the design): one backend host and one instance; the jobs inside the backend process; no load balancer; small database size; manual user creation (no public sign-up). These are allowances the guardrail permits, not decisions; how accounts are created is listed under "Not decided" in §3.
-
-**Exceptions:** any decision that breaks a row above is recorded in an ADR with the rework it would cost and why it's still accepted (ADR-0001). None so far. ADR-0011 and ADR-0017 change *how* row 10 is met, not whether.
-
-## 1. Requirements
-
-**Functional** (from the PRDs): browse every NFL player; connect Sleeper, Yahoo and ESPN; view and later change lineups, claims and trades; game-day problem list and live board; waiver and trade tools; weekly review analytics.
-
-**Phase 1** (Overview PRD): the player list, player card, and NFL scores and schedule, with nflverse data and no leagues connected.
-
-**Non-functional**
-
-| Requirement | Target | Source |
-|---|---|---|
-| Users | 1 at launch; many without rework (§0) | PRDs; ADR-0001 |
-| Player list and stats freshness | ≤ 24 h; one pipeline run a day at 06:00 Eastern | Player explorer PRD; ETL spec D7 |
-| League data freshness (later phase) | ≤ 15 min outside games, ≤ 60 s during games | Platform connections PRD |
-| Changes on platforms (later phase) | Confirmed, then verified by re-reading the platform | Platform connections PRD |
-| Sign-ins to platforms (later phase) | Encrypted at rest, never in the browser or in logs | Platform connections PRD |
-| Rebuild | Every pipeline table can be rebuilt by downloading again (backfill) | ADR-0005, ADR-0006 |
-| Cost | Low; personal project | Assumption |
-
-**Constraints:** one developer; TypeScript for the backend (ADR-0008, ADR-0009), on Node 24 (ADR-0017); Next.js for the frontend (ADR-0002); MySQL only (ADR-0005).
-
-**Load estimate:** one user. Phase 1 data is about 235 MB of CSV and about 410 MB in MySQL (ETL spec §7.3). The player list has about 1,250 fantasy-relevant rows; weekly player stats about 19,400 rows a season. Launch load doesn't size anything; simplicity and reliability do. Multi-user readiness is a design driver (§0).
-
-## 2. High-level design
+Fantasy Workbench is a personal web app for managing fantasy-football leagues on Sleeper, Yahoo and ESPN from one place. It is three deployable pieces plus two outside services: a **Next.js frontend** in the browser, a **single always-on Node process** (the Express backend: GraphQL API + data pipeline + scheduler), and **MySQL** as the only store — with **nflverse** supplying public NFL data and **Firebase Authentication** supplying sign-in. One user at launch; designed so more users never require rework (§3).
 
 ```mermaid
 flowchart LR
@@ -90,13 +58,13 @@ Purple: the backend process · Gray: outside services, the database, the browser
 | Component | What it does | Decided in |
 |---|---|---|
 | Next.js frontend | The screens. Calls the backend directly from the browser, with the user's Firebase ID token on every request | ADR-0002, ADR-0014 |
-| Firebase Authentication | Sign-in. The backend verifies each ID token with the Firebase Admin SDK | ADR-0015 |
+| Firebase Authentication | Sign-in (Google + passwordless email link). The backend verifies each ID token with the Firebase Admin SDK | ADR-0015, ADR-0021 |
 | Express backend | One always-on Node process, built as a layered modular monolith (routes, middleware, controllers/resolvers, services, models). Holds the API, the pipeline, its scheduler and the backfill command | ADR-0008 |
 | GraphQL endpoint | GraphQL Yoga mounted on Express; schema written code-first with Pothos; only the web app's registered queries are accepted; per-request DataLoaders batch lookups | ADR-0017, ADR-0016 |
 | Pipeline | Streams nflverse CSV files, maps columns by hand, loads staging tables and swaps each piece in one transaction | ADR-0006, ADR-0009, ADR-0012; ETL spec |
 | MySQL | The only store: app tables, the ingest ledger, run records, users and account-owned rows. No raw files are kept | ADR-0005, ADR-0010, ADR-0011 |
 
-**The boundary rule:** the pipeline handles league-agnostic data that needs no sign-in to any account (nflverse now; odds, rankings and the snapshot archiver later). Everything tied to a user's accounts and leagues belongs to platform connections, also inside the backend (ETL spec D15).
+**The boundary rule:** the pipeline handles league-agnostic data that needs no sign-in to any account (nflverse now; the snapshot archiver later). Everything tied to a user's accounts and leagues belongs to platform connections, also inside the backend (ETL spec D15).
 
 **Data flow**
 
@@ -106,7 +74,50 @@ Purple: the backend process · Gray: outside services, the database, the browser
 4. Fantasy points are calculated in the app for the scoring format the user selects; they are never stored (ADR-0007).
 5. Operators read run history through the GraphQL fields `pipelineRuns` and `ingestLedger` (ADR-0017).
 
-## 3. Decisions this design rests on
+## 2. Requirements
+
+**Functional** (from the PRDs): browse every NFL player; NFL scores and schedule; connect Sleeper, Yahoo and ESPN; lineup management (game-day problem list and live board, waivers, adds/drops, weekly team and settings snapshots); trades (evaluator, buy/sell list, proposals); weekly review analytics; news and forecast-weather surfaces (unscheduled); the app's own projections and rankings model (Projections phase).
+
+**Phase 1** (Overview PRD): the player list, player card, and NFL scores and schedule, with nflverse data and no leagues connected.
+
+**Non-functional**
+
+| Requirement | Target | Source |
+|---|---|---|
+| Users | 1 at launch; many without rework (§3) | PRDs; ADR-0001 |
+| Player list and stats freshness | ≤ 24 h; one pipeline run a day at 06:00 Eastern | Player explorer PRD; ETL spec D7 |
+| League data freshness (later phase) | ≤ 15 min outside games, ≤ 60 s during games | Platform connections PRD |
+| Changes on platforms (later phase) | Confirmed, then verified by re-reading the platform | Platform connections PRD |
+| Sign-ins to platforms (later phase) | Encrypted at rest, never in the browser or in logs | Platform connections PRD |
+| Rebuild | Every pipeline table can be rebuilt by downloading again (backfill) | ADR-0005, ADR-0006 |
+| Cost | Low; personal project | Assumption |
+
+**Constraints:** one developer; TypeScript for the backend (ADR-0008, ADR-0009), on Node 24 (ADR-0017); Next.js for the frontend (ADR-0002); MySQL only (ADR-0005).
+
+**Load estimate:** one user. Phase 1 data is about 235 MB of CSV and about 410 MB in MySQL (ETL spec §7.3). The API serves about 6,900 player rows per season (measured 2026-11-17 on the live contract after the PE5 population tightening; the on-screen list shows fewer once filters apply — the earlier ~1,250 figure was a pre-build estimate of list-visible rows); weekly player stats about 19,400 rows a season in MySQL. Launch load doesn't size anything; simplicity and reliability do. Multi-user readiness is a design driver (§3).
+
+## 3. Design guardrail: multi-user ready, no rework
+
+Firm, from ADR-0001. **Rule:** the app launches with one user (you), but no design decision may require significant rework to serve many users. Start with a small deployment (one host, one instance) but never a single-user design. Growing to more users should mean adding resources (more instances, a bigger database, a separate worker), never changing the data model, the component boundaries or the code structure.
+
+| # | Requirement | Why it avoids rework | How it's met |
+|---|---|---|---|
+| 1 | **A `users` table, and every account-owned row carries a `user_id`**: platform connections, sign-ins, leagues followed, settings, change log, preferences. You are user 1 | Adding ownership to every table and query later is the most expensive retrofit there is | `users` table in MySQL keyed to the Firebase `uid` (ADR-0015, ADR-0005) |
+| 2 | **Real user accounts and login**, even with one account. No shared password or "access restricted to me" shortcut | Replacing an auth shortcut touches every endpoint | Firebase Authentication; every request carries an ID token (ADR-0015, ADR-0014) |
+| 3 | **Every API request is scoped to the signed-in user.** No endpoint returns data without checking ownership | Retrofitting authorization means auditing every query | Token middleware puts the user in the GraphQL context; authorization lives in the services (ADR-0015, ADR-0017) |
+| 4 | **Sign-ins stored per user, encrypted**, with the key outside the database | Per-user credentials are already the shape multi-user needs | Applies when platform connections are built (later phase) |
+| 5 | **Stateless app server:** sessions, caches that matter and job state live in the database, never in process memory or on local disk | Lets a second instance run behind a load balancer with no code change | MySQL only, no bucket (ADR-0005). Job state in `ingest_ledger` and `job_run`; the run lock is a MySQL named lock (ADR-0006) |
+| 6 | **Background work (league sync, live poller) runs as jobs separate from the web request path**, keyed by league rather than by user, so a league shared by two users is polled once | The worker can move to its own process or machine without a rewrite | Each job has its own entry point that the scheduler only calls, so jobs can move to a worker (ADR-0008) |
+| 7 | **The serving database must handle concurrent writes from more than one process and machine** | Required by rows 5 and 6 once there is more than one instance | MySQL (ADR-0005) |
+| 8 | **Platform calls go through one rate-limit budget per platform**, not per request or per user | Prevents more users from turning into blocked accounts | Applies when platform connections are built (later phase) |
+| 9 | **Shared data is computed once for everyone:** NFL data is league-agnostic; league scoring is cached per league | Cost grows with leagues, not with users × screens | nflverse tables are shared reference data (ETL spec §0.1); points are calculated in the app from stored stats (ADR-0007) |
+| 10 | **Schema changes only through migrations; contracts (schemas, API responses) are versioned** | Changes can roll out without breaking running instances or other users | Changed how it's met, not whether. Database: hand-applied statements kept in order in `sql/`, not a migration tool (ADR-0011). API: no version numbers; GraphQL schema evolution with `@deprecated` and a breaking-change check in CI (ADR-0016, ADR-0017) |
+
+**What can stay small at launch** (scale the deployment, not the design): one backend host and one instance; the jobs inside the backend process; no load balancer; small database size; manual user creation (no public sign-up). These are allowances the guardrail permits, not decisions; how accounts are created is listed under "Not decided" in §4.
+
+**Exceptions:** any decision that breaks a row above is recorded in an ADR with the rework it would cost and why it's still accepted (ADR-0001). None so far. ADR-0011 and ADR-0017 change *how* row 10 is met, not whether.
+
+## 4. Technology decisions
 
 | Question | Answer | ADR |
 |---|---|---|
@@ -119,16 +130,16 @@ Purple: the backend process · Gray: outside services, the database, the browser
 | Data access | Hand-written SQL with mysql2; no ORM; schema changes by hand; no transform library | ADR-0010, ADR-0011, ADR-0012 |
 | Scoring | Calculated in the app from stored stats | ADR-0007 |
 | Frontend to API | The browser calls the API directly over public HTTPS; CORS limited to the frontend's origin | ADR-0014 |
-| Sign-in | Firebase Authentication | ADR-0015 |
+| Sign-in | Firebase Authentication; providers: Google + passwordless email link | ADR-0015, ADR-0021 |
 | API style and contract | GraphQL (Yoga, Pothos, trusted documents); the GraphQL schema is the contract | ADR-0017, ADR-0016 |
 | Frontend styling | CSS Modules per component over the shared `design/tokens.css`; no styling framework | ADR-0018 |
 | Frontend API client | Hand-written request layer (fetch, token, persisted hash); TanStack Query for caching; no GraphQL client library | ADR-0019 |
 | Frontend player table | Hand-rolled, with fixed-height row virtualization; no table library | ADR-0020 |
 | Who reads league data from the platforms (later phase) | The backend's platform connections, not the pipeline | ETL spec D15 |
 
-**Not decided (tracked elsewhere):** how user accounts are created: public sign-up or created by you (no ADR yet; ADR-0015 covers sign-in only); hosting provider for the backend, the frontend and MySQL (decision log, open item 4; a deployment-phase decision); backup and recovery (ETL spec D16); monitoring and alerting (decision log, open item 7; its own PRD later); where projections come from (Waivers & trades PRD; the Overview's placeholder formula is used until then).
+**Not decided (tracked elsewhere):** how user accounts are created, what per-user data is stored beyond settings, and which user actions are recorded — deferred to the real-league-integration phase (decision log, open question 10, via ADR-0021); hosting provider for the backend, the frontend and MySQL (decision log, open item 4; under active evaluation — see §6); backup and recovery (ETL spec D16); monitoring and alerting (decision log, open item 7; its own PRD later); where projections come from is decided: our own model (the Projections & rankings PRD); its approach and error metric are open there, and the Overview's placeholder formula is used until it ships.
 
-## 4. Deep dive
+## 5. Data ownership and API design
 
 **Data ownership**
 
@@ -137,8 +148,9 @@ Purple: the backend process · Gray: outside services, the database, the browser
 | nflverse tables (players, games, weekly stats, rosters, injuries, snaps, depth charts, play-by-play, teams) | Pipeline | MySQL (ETL spec §7.2) |
 | Ingest ledger, run records | Pipeline | MySQL |
 | Users and account-owned rows | API | MySQL, keyed to the Firebase `uid` |
-| Leagues, rosters, matchups, transactions, platform sign-ins (later phase) | Platform connections, in the backend | MySQL; sign-ins encrypted, key outside the database (§0 row 4) |
+| Leagues, rosters, matchups, transactions, platform sign-ins (later phase) | Platform connections, in the backend | MySQL; sign-ins encrypted, key outside the database (guardrail row 4, §3) |
 | Live scores and lock status (later phase) | Platform connections' live tier | MySQL, disposable |
+| Weekly team snapshots and league-settings snapshots (later phase; the Overview's historical-snapshots term) | Platform connections, recorded for Lineup management and Trades | MySQL, append-only history with capture timestamps |
 
 **API** (ADR-0014 to ADR-0017):
 - One GraphQL endpoint over public HTTPS. CORS allows only the frontend's origin. Every request carries a Firebase ID token in the `Authorization` header, and a request without a valid token is rejected.
@@ -152,14 +164,45 @@ Purple: the backend process · Gray: outside services, the database, the browser
 - Pipeline: a failed piece leaves the live table untouched and is retried on the next run; structural problems block a load, value problems only warn (ETL spec §5.3, §8).
 - Platform changes (later phase): confirm → send → re-read → mark done only if the platform matches; log every attempt (Platform connections PRD).
 
-## 5. Reliability and monitoring
+## 6. Hosting and deployment requirements
+
+Consolidated 2026-11-19, now that the hosting decision is active. What any hosting option must satisfy, assembled from §1–§2, the ADRs and the ETL spec. The current evaluation lives in [`research/hosting-options-research-2026-11-19.md`](../research/hosting-options-research-2026-11-19.md); a self-contained, provider-neutral hand-off copy is [`research/hosting-requirements-brief-2026-11-19.md`](../research/hosting-requirements-brief-2026-11-19.md).
+
+**Stack:** Next.js (App Router) frontend · Node 24 + Express 5 backend (GraphQL Yoga/Pothos) in **one always-on process** that also runs the pipeline and its node-cron scheduler (ADR-0008) · MySQL 8 (ADR-0005) · Firebase Authentication (external; ADR-0015, ADR-0021).
+
+**Deployables:** three — frontend (static-capable Next.js app), backend (single Node process; Docker-ready), MySQL. The browser calls the backend directly over public HTTPS (ADR-0014).
+
+**Hard requirements (architecture-derived):**
+1. **Always-on backend** — no sleeping, no scale-to-zero: an in-process scheduler fires the 06:00 ET ingest (multi-minute runs, streamed CSV downloads from GitHub over HTTPS), and the later live tier polls every ≥60 s during game windows.
+2. **Real MySQL 8 semantics** — `GET_LOCK` named locks (run lock, ADR-0006), session `TEMPORARY` tables (staging loads), foreign keys, transactions. MySQL-compatible engines must prove these specifically.
+3. **Backend ↔ MySQL low-latency/private networking preferred**; MySQL over TLS in production (§7).
+4. **Outbound egress** to nflverse GitHub releases (ingest) and Firebase (token verification); inbound HTTPS from the browser with CORS pinned to the frontend origin.
+5. **Secrets** (DB credentials, Firebase admin key) held server-side as environment configuration, never in the repo or browser.
+6. **Backups** for MySQL (ETL spec D16): nflverse tables are rebuildable by backfill; user-owned rows are not.
+
+**Workload profile (measured where stated):** ~410 MB in MySQL today (ETL spec §7.3), growing modestly per season; ~6,900 player rows served per season (measured 2026-11-17); one user at launch, multi-user-ready design (§3); near-idle outside the daily ingest and game windows.
+
+**Owner constraints (owner, 2026-11-19):** ≤ $15/month, free tiers strongly preferred where compromises are acceptable; one provider preferred; first deploy ASAP after the auth milestone. Deploy gates unchanged: MTDP before the first hosted deploy; auth milestone before public reachability (the backend refuses production with auth disabled); the §7 hardening list.
+
+## 7. Reliability and operations
+
+**Failure handling and recovery**
 
 - **One backend host is a single point of failure.** Acceptable for one user. The pipeline can always be rebuilt from nflverse by running the backfill again (ADR-0005).
 - **Overlap and restarts:** the MySQL named lock stops overlapping runs; on shutdown the scheduler stops starting runs and an interrupted run is redone safely (ADR-0006, ADR-0008).
 - **Monitoring:** out of scope for now; a failure is visible in `job_run` and the logs (ETL spec D8).
 - **Backups:** a deployment-phase decision (ETL spec D16). Research: [`research/mysql-hosting-options-research-2026-11-08.md`](../research/mysql-hosting-options-research-2026-11-08.md).
 
-## 6. Repositories → Three
+**Before the first deployment** (production hardening; none of it is needed locally):
+
+- Production settings: `NODE_ENV=production`; startup refuses a missing `FRONTEND_ORIGIN`; a `TRUST_PROXY` setting for the number of proxies in front of the API, without which every client shares one rate limit.
+- Response headers: HSTS, and `Cache-Control: no-store` on account data.
+- Database: connect to MySQL over TLS; give the app a user limited to its own schema (it still needs DDL there, because the pipeline creates and drops staging tables).
+- Sign-in: decide whether the token check uses `checkRevoked`, which costs a Firebase call per request, so a disabled account is refused before its token expires (up to an hour).
+- More than one backend instance: keep rate-limit counts in a shared store; in memory, each instance counts separately.
+- Dependency updates: Dependabot, which opens update pull requests on GitHub, or `npm outdated` and `npm audit` run by hand on a schedule.
+
+## 8. Repositories and shared artifacts
 
 | Repository | Holds | Deploys |
 |---|---|---|
@@ -169,7 +212,7 @@ Purple: the backend process · Gray: outside services, the database, the browser
 
 The backend and frontend are separate apps in separate repos (ADR-0008). The GraphQL schema file and the persisted-documents file are the only artifacts shared between them (ADR-0016).
 
-## 7. Trade-offs accepted
+## 9. Trade-offs accepted
 
 | Choice | Gives up | ADR |
 |---|---|---|
@@ -179,19 +222,35 @@ The backend and frontend are separate apps in separate repos (ADR-0008). The Gra
 | Browser calls the API directly | A private backend address; the API is public and must check every token | ADR-0014 |
 | GraphQL | Simpler REST for Phase 1, free HTTP caching, status-code monitoring | ADR-0017 |
 | Current-season-only play-by-play and depth charts | Historical play-by-play analytics | ADR-0013 |
-| Placeholder projections | Trade-tool quality until projections are decided | Waivers & trades PRD |
+| Placeholder projections | Trade-tool quality until the model ships | Projections & rankings PRD |
 
-## 8. Revisit as it grows
+## 10. Risks and technical debt
 
-- More users → no redesign (§0): add backend instances, move jobs to a separate worker (ADR-0008's upgrade trigger), enlarge the database, open sign-up.
+The open register — distinct from §9's *accepted* trade-offs. Each item names its impact, the trigger to act, and where it is tracked. Execution lives in the designated tracker (GitHub Issues), never here.
+
+| Item | Type | Impact | Mitigation / measure | Trigger to act · tracked where |
+|---|---|---|---|---|
+| MySQL backup approach undecided (ETL spec D16) | Risk and debt | User-owned rows are unrecoverable until solved; nflverse tables rebuild by backfill | Decide backups with the hosting pick; until then, local copies exist only on the dev machine | Closes with the hosting decision, now active · decision log item 4 |
+| Platform write paths rely on unofficial APIs (Sleeper GraphQL, ESPN) and a gated Yahoo write scope | Risk (later phases) | Changes-phase features may be blocked, break without notice, or carry ToS exposure | Capability contract degrades to link-out, fail closed; write-gate suite before any platform write | Owner decisions open · decision log items 11, 12, 15; [2026-11-18 open-decisions review](reviews/2026-11-18-platform-integration-open-decisions.md) |
+| One backend host is a single point of failure | Risk (accepted for one user) | Outage until restart; no data loss given backups above | Stateless process + MySQL job state make a second instance a deploy, not a rewrite (§3 rows 5–7) | Revisit at deployment and if users grow · §7 |
+| Placeholder projection formula behind PROJ and ranks | Debt (decided interim) | Weak numbers until the model ships | Labeled as placeholder on every surface (Overview shared term) | Retired by the Projections phase · Projections & rankings PRD |
+| PRD targets largely Uncalibrated | Debt | Success measures unvalidated against real use | Two-label rule keeps the gap visible (templates §2) | Calibrate at the first live integration |
+| Frontend nav labels still read "Game day / Waivers & trades" | Debt | Built UI lags the 2026-11-18 PRD restructure | Two-line Nav change, already specified | Next frontend change · GitHub issue (nav labels) |
+
+## 11. Growth triggers
+
+- More users → no redesign (§3): add backend instances, move jobs to a separate worker (ADR-0008's upgrade trigger), enlarge the database, open sign-up.
 - Live board latency → server-sent-event subscriptions instead of polling (ADR-0017).
 - Outside API clients → add depth, alias and cost limits alongside trusted documents (ADR-0017).
-- Projections → a separate modeling component if built.
+- Projections → the Projections & rankings model (its own phase, decided 2026-11-18); a separate modeling component if its compute outgrows the backend.
 
-**Before the first deployment** (to consider in the deployment phase; none is needed locally):
-- Production settings: `NODE_ENV=production`; startup refuses a missing `FRONTEND_ORIGIN`; a `TRUST_PROXY` setting for the number of proxies in front of the API, without which every client shares one rate limit.
-- Response headers: HSTS, and `Cache-Control: no-store` on account data.
-- Database: connect to MySQL over TLS; give the app a user limited to its own schema (it still needs DDL there, because the pipeline creates and drops staging tables).
-- Sign-in: decide whether the token check uses `checkRevoked`, which costs a Firebase call per request, so a disabled account is refused before its token expires (up to an hour).
-- More than one backend instance: keep rate-limit counts in a shared store; in memory, each instance counts separately.
-- Dependency updates: Dependabot, which opens update pull requests on GitHub, or `npm outdated` and `npm audit` run by hand on a schedule.
+## 12. Change log
+
+- **v2.6 (2026-11-19):** §10 "Risks and technical debt" added (owner-approved, from the arc42 gap analysis in `research/sadd-template-best-practices-research-2026-11-19.md`, with the register's form matching arc42 §11 (prioritized, mitigation per item)); growth triggers and the change log renumbered to §11/§12; the SADD template in `governance/templates.md` §3 rewritten the same day with per-section include/exclude rules.
+- **v2.5 (2026-11-19):** restructured as a standalone engineer reference at the owner's direction — table of contents added; change log moved here; sections reordered and renumbered (overview first, guardrail after requirements, hosting requirements and the pre-deployment hardening list under operations); internal references updated across the planning repo (frozen ADRs are never edited — their citations use the old numbering: old §0 → §3, old §3 → §4, old §4 → §5, old §5.5 → §6, old §6 → §8, old §8's pre-deployment list → §7). No decision or content change.
+- **v2.4 (2026-11-19):** hosting and deployment requirements consolidated into their own section (now §6) — stack, deployables, hard runtime requirements, workload profile, owner constraints — assembled now that the hosting decision is active (owner, 2026-11-19); previously these facts sat scattered across the requirements, overview and the ETL spec.
+- **v2.3 (2026-11-18):** aligned to the owner's PRD restructure: functional list uses the new feature set (Lineup management, Trades, News, Weather, Projections & rankings); snapshots row added to data ownership; sign-in cites ADR-0021; account-creation deferral cites decision-log open question 10; the projections growth trigger reflects the decided Projections phase; the load estimate's player-row figure replaced with the 2026-11-17 measurement (~6,900 served vs. the ~1,250 pre-build estimate).
+- **v2.2 (2026-11-16):** frontend construction decisions added to the decisions table (ADR-0018 to ADR-0020, from the frontend specs `specs/ff-frontend-foundation-spec.md`, `specs/ff-player-explorer-spec.md`, `specs/ff-nfl-scores-and-schedule-spec.md`).
+- **v2.1 (2026-11-10):** the pre-deployment hardening list added, from the 2026-11-10 security review of the backend setup script (owner: defer to the deployment phase).
+- **v2.0 (2026-11-09):** rewritten to match the accepted ADRs (ADR-0001 to ADR-0017). Removed: DuckDB, the storage bucket and its snapshot layout, Parquet and mart files, GitHub Actions as the pipeline host, Postgres and SQLite, the single repository, and the medallion layer names. The guardrail's ten requirements are kept word for word as the owner set them; a new column says how each is met now.
+- **v1.0–v1.4 (2026-11-05):** first drafts, written before the ADRs; superseded by v2.0.

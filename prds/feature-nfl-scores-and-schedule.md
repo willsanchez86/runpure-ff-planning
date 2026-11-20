@@ -10,6 +10,7 @@
 
 |  |  |
 | --- | --- |
+| **Status** | **In use (local)** — spec implemented on the live contract with real team logos (2026-11-17). Hosted deployment deferred ([Overview](00-overview.md)) |
 | **Serves** | Seeing the week's games, final scores and matchups, and jumping from a game to that team's players, before or without connecting a league |
 | **Viewing data** | Phase 1: one of the first three screens, before any league is connected |
 | **Making changes** | None. View only |
@@ -28,6 +29,8 @@ Without a connected league, you still want the week at a glance: who plays whom,
 | Final scores after game nights | Loaded by the 06:00 Eastern daily run, once nflverse has published them |
 | Reading a game's detail | One click on the game opens stadium, roof, surface, weather, line and starters |
 | Getting from a game to its players | One click on a team code filters the Player list to that team |
+
+*Targets: **Owner-approved** (baselined 2026-11-15/16; freshness follows the owner's daily-run decision, ETL D7) · **Uncalibrated** — no formal measurements recorded; methods and observation windows are defined at calibration.*
 
 ## Not doing
 
@@ -67,7 +70,7 @@ Without a connected league, you still want the week at a glance: who plays whom,
 | Idea | Why it's parked |
 | --- | --- |
 | Live in-game scores and a game-tracker | Needs a live source and in-game states; arrives with the Game-day live board |
-| Weather forecasts for upcoming games | The feed carries played-game conditions, not forecasts; needs a separate provider |
+| Weather forecasts for upcoming games | The feed carries played-game conditions, not forecasts. Forecasts are their own PRD ([Weather](feature-weather.md)); its provider and phase are open questions there |
 
 ## How we'll measure it
 
@@ -75,6 +78,8 @@ Without a connected league, you still want the week at a glance: who plays whom,
 | --- | --- | --- |
 | Age of scores and schedule | Daily | Never more than 24 hours old in season |
 | Getting from a game to a team's players | Each use | One click |
+
+*Targets: **Owner-approved** (baselined 2026-11-15/16; freshness follows the owner's daily-run decision, ETL D7) · **Uncalibrated** — no formal measurements recorded; methods and observation windows are defined at calibration.*
 
 ## Open questions
 

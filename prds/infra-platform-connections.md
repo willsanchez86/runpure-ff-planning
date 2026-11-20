@@ -2,12 +2,13 @@
 
 **Brings every league from Sleeper, Yahoo and ESPN into one place, and tells you exactly what the app can and can't do in each one.**
 
-**Last updated:** 2026-11-12 · reviewed against ADR-0008 (no change needed). 2026-11-09: · moved from the online PRD doc; links updated. Shared platform facts and terms: [Overview](00-overview.md).
+**Last updated:** 2026-11-18 · aligned to the Overview's capability-contract and verified-platform-action terms (owner's 2026-11-18 shared contract); same day, open-question statuses updated from the [platform API research](../research/platform-apis-sleeper-yahoo-espn-research-2026-11-18.md) and the owner's pending decisions listed in the [2026-11-18 open-decisions review](../design/reviews/2026-11-18-platform-integration-open-decisions.md). Earlier 2026-11-12 · reviewed against ADR-0008 (no change needed). 2026-11-09: · moved from the online PRD doc; links updated. Shared platform facts and terms: [Overview](00-overview.md).
 
 ## At a glance
 
 |  |  |
 | --- | --- |
+| **Status** | **Requirements** — PRD written; no spec or code. Next major milestone after the Firebase auth work (opens the Viewing phase) |
 | **Serves** | Every league-based journey. No league feature works until this does |
 | **Viewing data** | Viewing phase (after Phase 1) |
 | **Making changes** | Changes phase: Yahoo first, then Sleeper |
@@ -29,6 +30,8 @@ Each platform also allows different things. Without a layer that knows those lim
 | Data is fresh the rest of the week | No more than 15 minutes old |
 | A broken connection is never shown as current data | Flagged within one refresh |
 | Changes you make appear in each platform's own app | Every change checked against the platform afterwards |
+
+*Targets: **Owner-approved** (original PRD, baselined 2026-11-09) · **Uncalibrated** — no formal measurements recorded; methods and observation windows are defined at calibration.*
 
 ## Not doing
 
@@ -60,20 +63,20 @@ Each platform also allows different things. Without a layer that knows those lim
 
 | Requirement | Done when |
 | --- | --- |
-| **One shared data model** for leagues, teams, roster slots, players, matchups, transactions, scoring rules and what each league allows | Every screen reads from this model only, never from a platform directly |
+| **One shared data model** for leagues, teams, roster slots, players, matchups, transactions, scoring rules and what each league allows (the Overview's per-capability **capability contract**) | Every screen reads from this model only, never from a platform directly; each capability carries supported / unsupported / unknown / temporarily unavailable with its last verified time |
 | **Sleeper: view data** using your username and Sleeper's official public API | Typing a username loads every current-season league with rosters, matchups and settings. The full player list is fetched at most once a day. Requests stay under Sleeper's limit of 1,000 a minute |
 | **Yahoo: view data** through Yahoo's official sign-in | After approving access on Yahoo's page, leagues load and stay connected without asking again |
 | **ESPN: view data** using your two ESPN cookies | Valid cookies load your private leagues. Expired cookies show "Reconnect needed" on the league |
 | **One record per real player** across all three platforms | A player on two platforms shows once, with both rosters listed. Unmatched players are listed for you to match by hand, never dropped |
 | **Connection health** for each platform | Each shows its last successful update and a status: OK, Out of date, Broken or Reconnect needed. Out-of-date data is visibly marked |
-| **Sign-ins held by the Express backend** ([ADR-0008](../design/decisions/ADR-0008-run-the-api-and-pipeline-in-a-separate-express-backend.md)), per user | Sign-ins are stored encrypted, with the key outside the database (system design §0, row 4), and never sent to the browser |
+| **Sign-ins held by the Express backend** ([ADR-0008](../design/decisions/ADR-0008-run-the-api-and-pipeline-in-a-separate-express-backend.md)), per user | Sign-ins are stored encrypted, with the key outside the database (system design §3, row 4), and never sent to the browser |
 | Live game-day refresh: during game windows, poll each connected league's live matchups and scores on all three platforms; set lock status from kickoff times; refresh game-day player status. Moved here from Data ETL & storage | Live values no more than 60 seconds old during games; each platform's rate limit respected; replaced by final data once games end |
 
 ## Should have soon after
 
 | Requirement | Done when |
 | --- | --- |
-| **Yahoo: make changes** (set lineup, add and drop players) | After you confirm, the app sends the change, re-reads the roster from Yahoo, and shows success only if Yahoo matches |
+| **Yahoo: make changes** (set lineup, add and drop players) | Follows the Overview's **verified platform action** states: after you confirm, the app sends the change, re-reads the roster from Yahoo, and shows success only on a matching read-back; ambiguous outcomes stay visibly unresolved and are never retried automatically |
 | **Sleeper: make changes** using a pasted Sleeper sign-in token, behind an "Allow changes" switch | Every change shows a confirmation listing exactly what will change |
 | **Change history** | Every attempted change is logged with time, league, what changed and whether it worked |
 
@@ -94,19 +97,23 @@ Each platform also allows different things. Without a layer that knows those lim
 | Weeks with a connection broken for over 24 hours | Across the season | Fewer than 2 |
 | Confirmed changes that matched the platform afterwards | Across the season | All of them |
 
+*Targets: **Owner-approved** (original PRD, baselined 2026-11-09) · **Uncalibrated** — no formal measurements recorded; methods and observation windows are defined at calibration.*
+
 ## Open questions
 
 | Question | Blocks building? | Who answers | Status |
 | --- | --- | --- | --- |
-| Do Sleeper's and ESPN's terms of service allow automated use of their private systems and your cookies? Read before building any way to make changes. Moved from Data ETL & storage (Q2) | Yes, answer first | You | Open |
+| Do Sleeper's and ESPN's terms of service allow automated use of their private systems and your cookies? Read before building any way to make changes. Moved from Data ETL & storage (Q2). Terms read 2026-11-18 ([research](../research/platform-apis-sleeper-yahoo-espn-research-2026-11-18.md) §1.3, §3.4): Sleeper reads official and permitted non-commercially, Sleeper writes against ToS §9.2; ESPN automation prohibited on its face, no observed enforcement. The risk acceptance is now the open decision: [review](../design/reviews/2026-11-18-platform-integration-open-decisions.md) OD1/OD2, decision log 11 and 15 | Yes, answer first | You | Researched; decision open |
+| When to file Yahoo's access application — mandatory since mid-2026; new apps get read scope only, and only legacy write-scope credentials restore the official Yahoo write path ([research](../research/platform-apis-sleeper-yahoo-espn-research-2026-11-18.md) §2.1). Human-reviewed, no SLA — the calendar long pole for the Viewing phase | Yes, for Yahoo work | You | Open (decision log 12) |
+| What happens on disconnect: credentials deleted, and what becomes of already-synced league data and snapshots ([review](../design/reviews/2026-11-18-platform-integration-open-decisions.md) OD4) | No, answer during build | You | Open (decision log 14) |
 | Which shared player-ID list is current and covers all three platforms? Answered: one player crosswalk maps Sleeper, Yahoo and ESPN IDs to the nflverse player ID; built with this page's work, since Phase 1 uses nflverse IDs only | Yes, answer first | Engineering | Answered |
-| Does Yahoo's official API allow lineup changes for football leagues, or only adding and dropping players? | No, answer during build | Engineering | Open |
-| How long do ESPN cookies last before you have to paste them again? Moved from Data ETL & storage (Q3) | No, answer during build | Engineering | Open |
+| Does Yahoo's official API allow lineup changes for football leagues, or only adding and dropping players? Answered 2026-11-18: lineup changes are documented and football-confirmed (weekly-coverage roster PUT), plus add/drop, FAAB claims, edit/cancel claims and full trade actions — but the write scope is not grantable to new apps ([research](../research/platform-apis-sleeper-yahoo-espn-research-2026-11-18.md) §2.4, §2.1) | No, answer during build | Engineering | Answered |
+| How long do ESPN cookies last before you have to paste them again? Moved from Data ETL & storage (Q3). Answered 2026-11-18: months but revocable at any time, no official number; "sign out everywhere" invalidates them — design the 401 → re-paste flow ([research](../research/platform-apis-sleeper-yahoo-espn-research-2026-11-18.md) §3.1) | No, answer during build | Engineering | Answered |
 | Where will the backend that holds sign-ins run: your own computer or a small hosted server? Answered: it's the Express backend ([ADR-0008](../design/decisions/ADR-0008-run-the-api-and-pipeline-in-a-separate-express-backend.md)); its host is a deployment-phase decision | No, answer during build | You | Answered |
-| What are Yahoo's API rate limits, and does it expose waiver type, budget remaining and priority? Moved from Data ETL & storage (Q4) | Yes, answer first | Engineering | Open |
-| Where do late inactives come from on game day? nflverse injuries are weekly and Sleeper's player list is meant to be fetched at most once a day. Blocks the live game-day refresh. Moved from Data ETL & storage (Q5) | Yes, answer first | Engineering | Open |
-| Does the live game-day refresh run inside the always-on Express backend ([ADR-0008](../design/decisions/ADR-0008-run-the-api-and-pipeline-in-a-separate-express-backend.md)) or in a separate worker? Moved from Data ETL & storage (Q6) | Yes, answer first | You | Open |
-| How complete are Sleeper's espn\_id and yahoo\_id fields compared with nflverse's ID table? Moved from Data ETL & storage (Q7) | No, answer during build | Engineering | Open |
+| What are Yahoo's API rate limits, and does it expose waiver type, budget remaining and priority? Moved from Data ETL & storage (Q4). Answered 2026-11-18: no official numbers; ~1 request/second with caching is safe (blocks observed around 500/min; block responses are non-JSON text). Waiver type, rule and FAAB use are in league settings; your own pending claims — with priority and bid — are visible via the team-scoped transactions filter; FAAB balance sits in team metadata ([research](../research/platform-apis-sleeper-yahoo-espn-research-2026-11-18.md) §2.3, §2.5) | Yes, answer first | Engineering | Answered |
+| Where do late inactives come from on game day? nflverse injuries are weekly and Sleeper's player list is meant to be fetched at most once a day. Blocks the live game-day refresh. Moved from Data ETL & storage (Q5). Candidates from research, none yet verified as timely: per-league roster reads (status fields), ESPN player-news endpoint and live views, Sleeper's undocumented stats host — on the spec's build-time probe list | Yes, answer first | Engineering | Open (probe list) |
+| Does the live game-day refresh run inside the always-on Express backend ([ADR-0008](../design/decisions/ADR-0008-run-the-api-and-pipeline-in-a-separate-express-backend.md)) or in a separate worker? Moved from Data ETL & storage (Q6). Requirements, constraints and approaches: [review](../design/reviews/2026-11-18-platform-integration-open-decisions.md) OD3 | Yes, answer first | You | Open (decision log 13) |
+| How complete are Sleeper's espn\_id and yahoo\_id fields compared with nflverse's ID table? Moved from Data ETL & storage (Q7). Research note: duplicate espn\_id rows are documented in the nflverse/DynastyProcess data — the manual-match queue stands; coverage percentage needs a one-off comparison at build | No, answer during build | Engineering | Open (probe list) |
 
 Moved here from Data ETL & storage (2026-11-08): league data from all three platforms, the live game-day refresh and connection health. That also answers who turns the three platforms' league data into one shared league model: this page's work, in the Express backend.
 

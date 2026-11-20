@@ -172,6 +172,10 @@ for (const [num, adr] of adrs) {
   if (m) for (const term of m[1].split(';').map((t) => t.trim()).filter(Boolean)) ruledOut.push({ term, num });
 }
 const NEGATION = /\b(no|not|without|removed|instead of|rules? out|ruled out|replaces?|rather than)\b/i;
+// Closure-rule patterns: Claude-attributed closures, and the owner-approval markers
+// that legitimise them (documentation-suite §2).
+const CLAUDE_CLOSED = /Closed by default|Closed by Claude|Claude's recommendation|Claude recommends/i;
+const OWNER_APPROVED = /ratif|approved \(owner|accepted by the owner|owner, accepting|\(owner[,)]/i;
 const CHANGELOG = /^(> )?\*\*v\d/;
 const historical = (p) => /\/(research|design\/reviews)\//.test(p.replaceAll('\\', '/'));
 
@@ -188,6 +192,12 @@ for (const path of downstream) {
       else if (adr.status && /^(Superseded|Deprecated)/.test(adr.status)) {
         warnings.push(`${rel(path)}:${i + 1}: mentions ADR-${ref[1]} (${adr.status})`);
       }
+    }
+    // Closure rule (documentation-suite §2): an Answered/Closed resolution attributed
+    // to Claude must carry the owner's explicit approval on the same line. Dated
+    // changelog entries are historical records and stay as written.
+    if (!historical(path) && !CHANGELOG.test(line) && CLAUDE_CLOSED.test(line) && !OWNER_APPROVED.test(line)) {
+      errors.push(`${rel(path)}:${i + 1}: a Claude-closed resolution without explicit owner approval (documentation-suite §2)`);
     }
     if (historical(path) || CHANGELOG.test(line) || NEGATION.test(line)) return;
     for (const { term, num } of ruledOut) {

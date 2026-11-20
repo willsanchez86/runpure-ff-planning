@@ -1,7 +1,7 @@
 # Documentation Suite — Runpure FF
 
-**Last updated:** 2026-11-15
-**Purpose:** which planning documents exist, what each is for, where it lives, and how it changes. Blank structures for each are in [`governance/templates.md`](templates.md). Background research: [`research/minimal-planning-document-suite-research-2026-11-05.md`](../research/minimal-planning-document-suite-research-2026-11-05.md).
+**Last updated:** 2026-11-18
+**Purpose:** which planning documents exist, what each is for, where it lives, and how it changes. Lifecycle stages and handoffs are defined in [`delivery-lifecycle.md`](delivery-lifecycle.md); this suite remains authoritative for document ownership, approval, baselining, and location. Blank structures for each are in [`governance/templates.md`](templates.md). Background research: [`research/minimal-planning-document-suite-research-2026-11-05.md`](../research/minimal-planning-document-suite-research-2026-11-05.md).
 
 ---
 
@@ -20,6 +20,10 @@ Earlier copies of the PRDs and the 2026-11-08 open-decisions review were online 
 ```
 
 The project owner (William Sanchez) is the only approver. Claude may draft and propose, but records as decided only what the owner has decided.
+
+- **Proposed stays distinguishable from approved — in every document, not only ADRs.** A requirement, figure or threshold the owner has not decided is labeled **Proposed** with attribution and date; removing the label is itself an owner decision. Approval and measurement are independent dimensions ([`governance/templates.md`](templates.md) §2): a target can be Owner-approved yet Uncalibrated, and only actual observations make it Baselined.
+- **Nothing is decided, accepted, approved, answered or closed without the owner's explicit approval** (owner, 2026-11-18). "Closed by default", "closed because the owner didn't know", and silence after a presentation are not approval. A Claude-originated resolution stays Proposed, with attribution and date, until the owner approves it; any downstream document or implementation relying on one must say it relies on a Proposed resolution. The doc check fails an Answered/Closed status that rests on an unapproved recommendation.
+- **Cross-cutting requirements are documented once and referenced.** A rule that binds several features (shared terms, the live-data/snapshot/verification contract, capability definitions) lives in `prds/00-overview.md`; other documents link to it rather than restate it, so it cannot drift into conflicting copies.
 
 ### 2.1 The Baseline Rule
 - No code is written for a feature until its PRD and the parts of the system design it relies on are committed to `main`.
@@ -50,6 +54,8 @@ The project owner (William Sanchez) is the only approver. Claude may draft and p
 | **Research** | Evidence behind decisions, with sources | `research/<topic>-research-YYYY-MM-DD.md` | — |
 | **Decision reviews** | Dated working records of a review of open decisions | `design/reviews/` | — |
 | **Prototypes** | Working mock-ups on sample data that a PRD builds from; not the product | `prototypes/` | — |
+| **Delivery lifecycle** | Workflow stages, handoffs and document-to-lifecycle mapping; does not replace this suite’s governance rules | [`governance/delivery-lifecycle.md`](delivery-lifecycle.md) | — |
+| **Work tracking & completion** | Status, remaining-work visibility and evidence needed to close work items; not a replacement for PRDs or the decision log. Designated tracker (owner, 2026-11-19): GitHub Issues in `runpure-ff-planning`; `design/reviews/` records are historical | [`governance/work-tracking-and-completion.md`](work-tracking-and-completion.md) | — |
 
 ### Document A: PRDs
 - **Purpose:** what is built and why, with scope boundaries so the project doesn't creep.
@@ -79,5 +85,8 @@ The project owner (William Sanchez) is the only approver. Claude may draft and p
 | Implementation specs | Project owner | Per change to that piece | `specs/` |
 | MTDP | Project owner | Per release | `design/mtdp.md` (not yet written) |
 | Research | Claude, for the owner | When its decision is revisited | `research/` |
+| Decision reviews | Project owner | When reviewed decisions are revisited | `design/reviews/` |
 | Prototypes | Project owner | When the PRD that uses it changes | `prototypes/` |
+| Delivery lifecycle | Project owner | When lifecycle stages or handoffs change | [`governance/delivery-lifecycle.md`](delivery-lifecycle.md) |
+| Work tracking & completion | Project owner | When work-tracking process or completion rules change | [`governance/work-tracking-and-completion.md`](work-tracking-and-completion.md) |
 | Templates and this document | Project owner | When a rule changes | `governance/` |

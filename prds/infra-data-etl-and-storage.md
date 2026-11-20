@@ -2,7 +2,7 @@
 
 **Loads nflverse's NFL data into MySQL tables that the Phase 1 screens read, keeps them current, and can rebuild every table from the source with one command.**
 
-**Last updated:** 2026-11-10 · Technical PRD, draft v2.2 · Owner: William Sanchez · v2.2: history starts in 2022 (ADR-0006, owner, 2026-11-10); build order matches the updated backend setup script. v2.1: moved from the online PRD doc; run history exposed through GraphQL (ADR-0017).
+**Last updated:** 2026-11-18 · consensus-rankings Later item dropped (owner: no third-party projection data; Q11 closed); governance correction: D10 and D12, closed on Claude's recommendation without explicit approval, ratified by the owner (statuses below). Earlier 2026-11-10 · Technical PRD, draft v2.2 · Owner: William Sanchez · v2.2: history starts in 2022 (ADR-0006, owner, 2026-11-10); build order matches the updated backend setup script. v2.1: moved from the online PRD doc; run history exposed through GraphQL (ADR-0017).
 
 Its implementation spec is [`specs/ff-data-etl-storage-spec.md`](../specs/ff-data-etl-storage-spec.md), and the decisions behind it are ADR-0001 to ADR-0013 ([decision log](../design/architecture-decisions.md)). The API that reads its tables is GraphQL ([ADR-0017](../design/decisions/ADR-0017-use-graphql-for-the-backend-api.md)).
 
@@ -10,6 +10,7 @@ Its implementation spec is [`specs/ff-data-etl-storage-spec.md`](../specs/ff-dat
 
 |  |  |
 | --- | --- |
+| **Status** | **In use (local)** — pipeline operational: 2022 → current backfill loaded, daily ingest scheduled, spec at v2.18 ([ff-data-etl-storage-spec](../specs/ff-data-etl-storage-spec.md)) |
 | **Serves** | The Phase 1 screens (Player list, Player card, NFL scores and schedule) through the Express API, plus you as the operator |
 | **Viewing data** | Everything else reads from it. It's specified and built first |
 | **Making changes** | None. It only reads from nflverse |
@@ -61,6 +62,8 @@ If this layer is wrong, every screen above it is silently wrong. It also has to 
 | Safe re-runs | Loading the same piece twice gives identical tables; a run killed midway leaves the previous data intact |
 | Rebuild | Every table can be rebuilt by running the backfill again |
 
+*Targets: **Owner-approved** (the owner's D6/D7 decisions and the baselined PRD) · **Uncalibrated** — no formal measurements recorded; methods and observation windows are defined at calibration. The ledger and `job_run` instrument these, but instrumentation is not calibration.*
+
 ## Not doing
 
 | Not doing | Where it lives instead, or why |
@@ -102,7 +105,6 @@ None. Monitoring and alerting get their own PRD in a later phase (decision log, 
 | Idea | Why it's parked |
 | --- | --- |
 | Odds: game lines and player props | Vendor not chosen |
-| Consensus rankings | FantasyPros key or nflverse's free path not chosen |
 | Snapshot archiver | Not in Phase 1. When it starts, snapshots are stored as MySQL rows, as ADR-0005 does for other dated copies |
 | Sleeper player list | Set aside; ADR-0004 keeps dated copies once it's enabled |
 | Charting and tracking data (Next Gen Stats, FTN, participation, PFR advanced), coaching, weather | Not among the Phase 1 datasets |
@@ -137,6 +139,8 @@ Freezing these table contracts is what lets the API and screens build against th
 | Scheduled runs that finish without a failed piece | Each run (`job_run`) | Every run; a failed piece is retried on the next run |
 | Backfill completeness | After the backfill | One `loaded` ledger row per dataset × season |
 
+*Targets: **Owner-approved** (the owner's D6/D7 decisions and the baselined PRD) · **Uncalibrated** — no formal measurements recorded; methods and observation windows are defined at calibration. The ledger and `job_run` instrument these, but instrumentation is not calibration.*
+
 ## Open questions
 
 The "Ref" column: D labels are the implementation spec's §0.2 decisions; Q labels are this PRD's own question numbers, which the spec's §11 also cites.
@@ -146,13 +150,13 @@ The "Ref" column: D labels are the implementation spec's §0.2 decisions; Q labe
 | Which season counts as "current", including the off-season? | D6 | Yes, before runs are left unattended | You | Answered: the season in progress on today's date; between seasons, rosters switch March 15 and everything else the Wednesday after Labor Day |
 | When do scheduled runs happen? | D7 | Yes, before runs are left unattended | You | Answered: once a day at 06:00 Eastern |
 | Load a team table, for team names and foreign keys? | D9a | No, answer during build | You | Answered: yes, nflverse's team file is loaded as `team` |
-| Which checks block a load, and which only warn? | D10 | Yes, answer first | You | Closed by Claude's recommendation (you didn't know): structural checks block, value checks warn |
-| Scheduler library: node-cron or node-schedule? | D12 | No, answer during build | You | Closed by default: node-cron, already in the scaffold |
+| Which checks block a load, and which only warn? | D10 | Yes, answer first | You | Approved (owner, 2026-11-18), ratifying Claude's 2026-11-08 proposal: structural checks block, value checks warn |
+| Scheduler library: node-cron or node-schedule? | D12 | No, answer during build | You | Approved (owner, 2026-11-18), ratifying Claude's proposal: node-cron, already in the scaffold |
 | How soon after games does nflverse publish player stats? Sets the real freshness | Q8 | No, answer during build | Engineering | Open |
 | Has the snapshot archiver run yet? | Q1 | — | You | Answered: it doesn't run in Phase 1 |
 | Where are raw files and snapshots stored? | Q12 | — | You | Answered: no raw files are kept; MySQL is the only store (ADR-0005) |
 | Which odds vendor: The Odds API or SportsGameOdds? | Q10 | Later phase | You | Open |
-| Consensus rankings: FantasyPros key or the free path? | Q11 | Later phase | You | Open |
+| Consensus rankings: FantasyPros key or the free path? | Q11 | — | You | Dropped (owner, 2026-11-18): no third-party projection data is fetched — rankings come from our own model ([Projections & rankings](../prds/feature-projections-and-rankings.md)) |
 | Terms of service (Q2), ESPN cookies (Q3), Yahoo limits (Q4), late inactives (Q5), where the live tier runs (Q6), Sleeper ID fields (Q7), shared league model (Q9) | — | — | — | Moved to [Platform connections](infra-platform-connections.md) |
 
 ## Build order
