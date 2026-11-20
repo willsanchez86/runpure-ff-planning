@@ -78,7 +78,7 @@ Player explorer needs no league, so it's built first. Projections & rankings als
 | **Projections phase** | The private [Projections & rankings](feature-projections-and-rankings.md) model replaces the placeholder numbers. Needs no league data, so it runs after Phase 1 alongside the Viewing phase (owner, 2026-11-18) |
 | **Changes phase** | The second league phase: the app makes changes on platforms that allow them (Yahoo first, then Sleeper) |
 
-**Deployment:** hosted deployment waits until real league integration works — after the Viewing phase proves itself on the owner's leagues (owner, 2026-11-18). Until then everything runs locally; the deploy checklist stays in the Phase 1 remaining-work tracker.
+**Deployment:** the hosting decision and deployment preparation begin now (owner, 2026-11-19, lifting the 2026-11-18 deferral): hosting research → hosting ADR(s) → MTDP → production hardening. The existing deploy gates are unchanged (MTDP before the first hosted deploy; the auth milestone before the app is publicly reachable — the backend refuses production with auth disabled). Until deployed, everything runs locally.
 
 ## Features and infrastructure
 
