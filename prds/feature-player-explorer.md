@@ -4,6 +4,8 @@
 
 **Last updated:** 2026-11-18 · governance correction: open question Q3, closed in 2026-11-08 on Claude's recommendation, is ratified via the owner's PE3/PE4 decisions. Earlier 2026-11-17 · IDP removed from Phase 1 (owner, during cut-over testing; spec PE5): the list covers QB/RB/WR/TE/K and team defenses; individual defensive players return in a later phase if an IDP league needs them. Earlier 2026-11-16 · reconciled to the frontend implementation specs (owner decisions PE1–PE4, [`specs/ff-player-explorer-spec.md`](../specs/ff-player-explorer-spec.md)): the list gains its own season selector covering 2022 to the current season; prior seasons load real stored data on demand, so the previously recorded prior-season limits (estimated ranks, blank results) no longer apply; incremental "show more" paging is replaced by virtualized scrolling of the full list. Earlier (2026-11-15): reconciled to the Phase 1 prototype (the as-built design is the Phase 1 spec): dropped the "last 3 games" column, added a combined IDP position filter, a per-game/totals toggle and a Rookies filter, noted the Expanded profile and Compare as realized in Phase 1, and recorded the prior-season limits. Earlier (2026-11-12): range switch set to the full season or a custom range of weeks; player-detail scope expanded under Should have soon. Earlier (2026-11-09): sign-in requirement (ADR-0015), game-night stats timing (ETL spec D7) and per-account settings (ADR-0001) aligned with decisions
 
+*Reconciled 2026-11-25 with ADR-0006 as revised (past-season version checks, upserted entity tables, in-run retries): no change needed here; history depth is still 2022 → current.*
+
 ## At a glance
 
 |  |  |

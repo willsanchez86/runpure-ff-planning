@@ -4,6 +4,8 @@
 
 **Last updated:** 2026-11-16 · reconciled to the frontend implementation specs ([`../specs/ff-player-explorer-spec.md`](../specs/ff-player-explorer-spec.md)): the Player list gains a season selector covering 2022 → current (owner decision PE3); prior seasons are real data fetched on demand (PE2). Earlier 2026-11-15 · reconciled to the Phase 1 prototype: card described as tabbed sections (not single-scroll); combined IDP filter, per-game/totals toggle and Rookies filter added to the Player-list controls; expanded profile noted as shipping in Phase 1; NFL screen PRD now exists. Earlier 2026-11-12 · open questions resolved (devices, accessibility, visual language); player-detail scope expanded and recorded in [`../prds/feature-player-explorer.md`](../prds/feature-player-explorer.md). Original brief dated 2026-11-10.
 
+*Reconciled 2026-11-25 with ADR-0006 as revised (past-season version checks, upserted entity tables, in-run retries): no change needed here; history depth is still 2022 → current.*
+
 > Where this brief and a PRD disagree, the PRD wins. The visual *system* (token values and rules) lives in [`design-language.md`](design-language.md); the working reference implementation is the prototype at [`../prototypes/phase1/`](../prototypes/phase1/).
 
 ## What to design

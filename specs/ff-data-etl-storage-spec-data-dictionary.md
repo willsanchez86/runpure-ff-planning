@@ -6,9 +6,13 @@ Every column of every ingested file, profiled 2026-11-08 (teams and depth charts
 
 **Validated 2026-11-10 against freshly downloaded files** (every season 2017–2026 of the five seasonal datasets, the three single files, and the 2026 depth charts and play-by-play): every file's columns match this dictionary in name and order — injuries excepted, which ships two 16-column headers (A7) — and every observed value fits its proposed type except `kick_distance`, corrected below. Other findings are in the spec, §7.2.3.
 
+**Target tables (2026-11-25):** this appendix describes the **source files**. Where the [schema principles review](../design/reviews/2026-11-24-schema-principles-review.md) (review D3–D8, decided, not built) stores a column elsewhere or not at all, the section opens with a note in italics.
+
 **Seasons:** the seasonal datasets were profiled for 2017–2026, a wider range than Phase 1 loads (2022–2026, ADR-0006). Types sized on the wider range hold for the narrower one; row counts below are for the profile.
 
 ## A1. Weekly player stats (`stats_player`)
+
+*Target table after the [schema principles review](../design/reviews/2026-11-24-schema-principles-review.md) (decided 2026-11-25, not built): `player_name`, `player_display_name` and `headshot_url` are not stored (review D7); `player_id` and `game_id` get foreign keys (review D3).*
 
 Descriptions: [nflreadr dictionary](https://ftp.fau.de/cran/web/packages/nflreadr/vignettes/dictionary_player_stats.html). The dictionary predates 36 newer columns, shown as having no entry.
 
@@ -317,6 +321,8 @@ Grain: one team in one week. Natural key: season, season_type, week, team. Profi
 
 ## A3. Schedules (`schedules/games.csv`)
 
+*Target table after the review (not built): `old_game_id`, `gsis`, `nfl_detail_id`, `pfr`, `pff`, `espn`, `ftn` become `game_source` rows (review D4); `away_qb_name`, `home_qb_name` are not stored and the QB IDs get foreign keys to `player` (review D7, D3); `stadium_id` gets a foreign key to the new `stadium` table, and `stadium` keeps the name the game was played under, taken from play-by-play where present (review D6, D7); `game` gains `start_time`, `weather`, `home_opening_kickoff` from play-by-play (A10).*
+
 Descriptions: [nflreadr dictionary](https://nflverse.r-universe.dev/nflreadr/data/dictionary_schedules/ndjson). 
 
 Grain: one game. Natural key: game_id. Profiled: 7,548 rows (single file, 1999–2026). 46 columns; 45 have an nflreadr dictionary entry.
@@ -397,6 +403,8 @@ Grain: one team code. Natural key: team_abbr. Profiled: 36 rows (single file), 2
 
 ## A5. Players (`players/players.csv`)
 
+*Target table after the review (not built): `esb_id`, `nfl_id`, `pfr_id`, `pff_id`, `otc_id`, `espn_id`, `smart_id` become `player_source` rows (review D4); snap counts reach `player` through `player_source`, not `player.pfr_id`.*
+
 Descriptions: [nflreadr dictionary](https://ftp.fau.de/cran/web/packages/nflreadr/vignettes/dictionary_players.html). 
 
 Grain: one player. Natural key: gsis_id. Profiled: 24,867 rows (single file); 24,737 on 2026-11-10, after nflverse dropped 130 players whose last season was 2012. 39 columns; 39 have an nflreadr dictionary entry.
@@ -445,6 +453,8 @@ Grain: one player. Natural key: gsis_id. Profiled: 24,867 rows (single file); 24
 
 ## A6. Season rosters (`rosters`)
 
+*Target table after the review (not built): kept: `season`, `team`, `gsis_id` (foreign key to `player`, review D3) and 12 per-season facts (`position`, `depth_chart_position`, `jersey_number`, `status`, `status_description_abbr`, `years_exp`, `ngs_position`, `height`, `weight`, `headshot_url`, `week`, `game_type`). Not stored (review D7): `full_name`, `first_name`, `last_name`, `football_name`, `birth_date`, `college` (roster-only values copied to `player` first), `rookie_year`, `entry_year`, `draft_number`, `draft_club` (duplicates of `player` columns). The 11 provider IDs become `player_source` rows (review D4). Rows whose player is not in `players.csv` are excluded (review D5).*
+
 Descriptions: [nflreadr dictionary](https://cloud.r-project.org/web/packages/nflreadr/vignettes/dictionary_rosters.html). 
 
 Grain: one player on one team in one season. Natural key: season, team, gsis_id. Profiled: 31,013 rows (2017–2026). 36 columns; 36 have an nflreadr dictionary entry.
@@ -490,6 +500,8 @@ Grain: one player on one team in one season. Natural key: season, team, gsis_id.
 
 ## A7. Injuries (`injuries`)
 
+*Target table after the review (not built): `full_name`, `first_name`, `last_name` are not stored (review D7); `gsis_id` gets a foreign key to `player` (review D3).*
+
 Descriptions: [nflreadr dictionary](https://cloud.r-project.org/web/packages/nflreadr/vignettes/dictionary_injuries.html). 
 
 Grain: one player's report for one game week. Natural key: season, week, game_type, team, gsis_id (latest report wins). Profiled: 53,262 rows (2017–2026). 17 columns; 16 have an nflreadr dictionary entry.
@@ -518,6 +530,8 @@ The file ships two 16-column headers, so this 17-column table is their union and
 
 ## A8. Snap counts (`snap_counts`)
 
+*Target table after the review (not built): `pfr_game_id`, `season`, `game_type`, `week` are not stored (they repeat `game`; review D7); `player` and `position` stay; a new `source_code` column (`pfr`, or empty when the PFR ID is unknown) pairs with `pfr_player_id` in a foreign key to `player_source` (review D4, D5); `game_id` gets a foreign key to `game` (review D3).*
+
 Descriptions: [nflreadr dictionary](https://ftp.fau.de/cran/web/packages/nflreadr/vignettes/dictionary_snap_counts.html). 
 
 Grain: one player in one game. Natural key: game_id, pfr_player_id. Profiled: 240,602 rows (2017–2026). 16 columns; 16 have an nflreadr dictionary entry.
@@ -543,6 +557,8 @@ Grain: one player in one game. Natural key: game_id, pfr_player_id. Profiled: 24
 
 ## A9. Depth charts (`depth_charts`, current season)
 
+*Target table after the review (not built): `pos_grp`, `pos_name`, `pos_abb` move to the `position_group` and `position` lookup tables, with foreign keys on `pos_grp_id` and `pos_id` (review D6); `gsis_id` gets a foreign key to `player` and, when empty, is filled from `espn_id` through `player_source` (review D3, D5); `player_name` stays.*
+
 Descriptions: [nflreadr dictionary](https://ftp.fau.de/cran/web/packages/nflreadr/vignettes/dictionary_depth_charts.html). 
 
 Grain: one player in one depth-chart slot at one dated snapshot. Natural key: dt, team, pos_grp_id, pos_slot, pos_rank. Profiled: 763,791 rows (2026 to date, 285 snapshots). 12 columns; 12 have an nflreadr dictionary entry.
@@ -564,6 +580,8 @@ Grain: one player in one depth-chart slot at one dated snapshot. Natural key: dt
 
 
 ## A10. Play-by-play (`pbp`, current season)
+
+*Target table after the review (not built): 28 game-level columns leave `play` (22 identical to `game`; `season_type` derivable; `start_time`, `weather`, `home_opening_kickoff`, `stadium` move to `game`; `nfl_api_id` to `game_source`); the 26 single-role player-name columns are not stored and their ID columns get foreign keys to `player`; the 60 numbered slot columns become `play_participant` rows; the 18 drive columns stay (review D3, D4, D7, D8). Column by column: the [migration script](../design/reviews/2026-11-24-schema-principles-review-migration.sql).*
 
 Descriptions: [nflreadr dictionary](https://ftp.fau.de/cran/web/packages/nflreadr/vignettes/dictionary_pbp.html). Field names and documented types are exact; many descriptions are paraphrased by the fetch tool, so treat them as approximate.
 

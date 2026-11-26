@@ -273,7 +273,7 @@ Every open decision in the ETL spec (v2.0, D1–D15) gets one page, plus D16 for
 | Skip a run if the last is still going | `noOverlap` | Not mentioned | `protect` | [nodecron.com](https://www.nodecron.com/prevent-overlapping-cron-jobs.html); croner README |
 | Licence | ISC | MIT | MIT | Package pages |
 
-**Why.** Download counts are equal, so the difference is maintenance: node-cron is active and node-schedule has 170 open issues and no release in almost four years. The scaffold's `GET_LOCK` already prevents overlapping runs, so `noOverlap` is a second guard, not a requirement.
+**Why.** Download counts are equal, so the difference is maintenance: node-cron is active and node-schedule has 170 open issues and no release in almost four years.
 
 **Quantified difference.** No code change (the scaffold already uses node-cron), one fewer dependency for types, and a library released in the last few months instead of one about 3 years and 10 months old. Run `npm view node-cron time` to confirm the current version, since the sources disagree.
 

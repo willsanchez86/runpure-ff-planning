@@ -1,6 +1,6 @@
 # System Design — Fantasy Workbench (Runpure FF)
 
-**Status:** Draft v2.6 · **Owner:** William Sanchez · **Date:** 2026-11-19
+**Status:** Draft v2.8 · **Owner:** William Sanchez · **Date:** 2026-11-25
 **Purpose:** how the system is put together: components, boundaries, data flow, and how the multi-user guardrail is met. Each choice is decided in an ADR (`design/decisions/`); this document puts them in one picture and cites them inline. It decides nothing itself.
 **Inputs:** PRDs (`prds/`), [`specs/ff-data-etl-storage-spec.md`](../specs/ff-data-etl-storage-spec.md), decision log [`design/architecture-decisions.md`](architecture-decisions.md). The change log is at the end (§12).
 
@@ -68,7 +68,7 @@ Purple: the backend process · Gray: outside services, the database, the browser
 
 **Data flow**
 
-1. At 06:00 Eastern each day, the scheduler starts an ingest run. It takes the MySQL run lock, checks each nflverse file's published version against the ledger, and loads only changed pieces (ADR-0006; ETL spec §5, §9).
+1. At 06:00 Eastern each day, the scheduler starts an ingest run. It checks each nflverse file's published version against the ledger and loads only changed pieces, marking each piece's ledger row in the same transaction as its swap (ADR-0006; ETL spec §5, §9).
 2. Each piece streams into a staging table and replaces the live rows in one transaction; the ledger and `job_run` record the result (ETL spec §5.3).
 3. The browser signs in with Firebase and sends GraphQL queries with the ID token. The backend verifies the token, resolves the query through services and models with hand-written SQL, and returns only the fields asked for (ADR-0014, ADR-0015, ADR-0017, ADR-0010).
 4. Fantasy points are calculated in the app for the scoring format the user selects; they are never stored (ADR-0007).
@@ -106,7 +106,7 @@ Firm, from ADR-0001. **Rule:** the app launches with one user (you), but no desi
 | 2 | **Real user accounts and login**, even with one account. No shared password or "access restricted to me" shortcut | Replacing an auth shortcut touches every endpoint | Firebase Authentication; every request carries an ID token (ADR-0015, ADR-0014) |
 | 3 | **Every API request is scoped to the signed-in user.** No endpoint returns data without checking ownership | Retrofitting authorization means auditing every query | Token middleware puts the user in the GraphQL context; authorization lives in the services (ADR-0015, ADR-0017) |
 | 4 | **Sign-ins stored per user, encrypted**, with the key outside the database | Per-user credentials are already the shape multi-user needs | Applies when platform connections are built (later phase) |
-| 5 | **Stateless app server:** sessions, caches that matter and job state live in the database, never in process memory or on local disk | Lets a second instance run behind a load balancer with no code change | MySQL only, no bucket (ADR-0005). Job state in `ingest_ledger` and `job_run`; the run lock is a MySQL named lock (ADR-0006) |
+| 5 | **Stateless app server:** sessions, caches that matter and job state live in the database, never in process memory or on local disk | Lets a second instance run behind a load balancer with no code change | MySQL only, no bucket (ADR-0005). Job state in `ingest_ledger` and `job_run` (ADR-0006) |
 | 6 | **Background work (league sync, live poller) runs as jobs separate from the web request path**, keyed by league rather than by user, so a league shared by two users is polled once | The worker can move to its own process or machine without a rewrite | Each job has its own entry point that the scheduler only calls, so jobs can move to a worker (ADR-0008) |
 | 7 | **The serving database must handle concurrent writes from more than one process and machine** | Required by rows 5 and 6 once there is more than one instance | MySQL (ADR-0005) |
 | 8 | **Platform calls go through one rate-limit budget per platform**, not per request or per user | Prevents more users from turning into blocked accounts | Applies when platform connections are built (later phase) |
@@ -161,7 +161,7 @@ Firm, from ADR-0001. **Rule:** the app launches with one user (you), but no desi
 - Logs record each request's operation name and its `errors` array, because GraphQL can report failures inside an HTTP 200.
 
 **Error handling**
-- Pipeline: a failed piece leaves the live table untouched and is retried on the next run; structural problems block a load, value problems only warn (ETL spec §5.3, §8).
+- Pipeline: a failed piece leaves the live table untouched; its publishing transaction is retried up to 2 more times within the run (schema review D1, not built), and a piece still failing is retried on the next run; structural problems block a load, value problems only warn (ETL spec §5.3, §8).
 - Platform changes (later phase): confirm → send → re-read → mark done only if the platform matches; log every attempt (Platform connections PRD).
 
 ## 6. Hosting and deployment requirements
@@ -174,7 +174,7 @@ Consolidated 2026-11-19, now that the hosting decision is active. What any hosti
 
 **Hard requirements (architecture-derived):**
 1. **Always-on backend** — no sleeping, no scale-to-zero: an in-process scheduler fires the 06:00 ET ingest (multi-minute runs, streamed CSV downloads from GitHub over HTTPS), and the later live tier polls every ≥60 s during game windows.
-2. **Real MySQL 8 semantics** — `GET_LOCK` named locks (run lock, ADR-0006), session `TEMPORARY` tables (staging loads), foreign keys, transactions. MySQL-compatible engines must prove these specifically.
+2. **Real MySQL 8 semantics** — session `TEMPORARY` tables (staging loads), foreign keys, transactions. MySQL-compatible engines must prove these specifically.
 3. **Backend ↔ MySQL low-latency/private networking preferred**; MySQL over TLS in production (§7).
 4. **Outbound egress** to nflverse GitHub releases (ingest) and Firebase (token verification); inbound HTTPS from the browser with CORS pinned to the frontend origin.
 5. **Secrets** (DB credentials, Firebase admin key) held server-side as environment configuration, never in the repo or browser.
@@ -189,7 +189,7 @@ Consolidated 2026-11-19, now that the hosting decision is active. What any hosti
 **Failure handling and recovery**
 
 - **One backend host is a single point of failure.** Acceptable for one user. The pipeline can always be rebuilt from nflverse by running the backfill again (ADR-0005).
-- **Overlap and restarts:** the MySQL named lock stops overlapping runs; on shutdown the scheduler stops starting runs and an interrupted run is redone safely (ADR-0006, ADR-0008).
+- **Overlap and restarts:** runs are not coordinated (no lock). Loads are idempotent (`team`, `player`, `game` upserted; facts replaced per piece), each piece's ledger row commits with its swap, and a failed publishing transaction is retried up to 2 more times in the run, each attempt logged (schema review D1, D2; retries not built). Accepted risk (owner, 2026-11-25): if an older copy of a file commits last, the next run sees the changed version and reloads it. Cost: duplicate work; on shutdown the scheduler stops starting runs and an interrupted run is redone safely (ADR-0006, ADR-0008).
 - **Monitoring:** out of scope for now; a failure is visible in `job_run` and the logs (ETL spec D8).
 - **Backups:** a deployment-phase decision (ETL spec D16). Research: [`research/mysql-hosting-options-research-2026-11-08.md`](../research/mysql-hosting-options-research-2026-11-08.md).
 
@@ -246,6 +246,8 @@ The open register — distinct from §9's *accepted* trade-offs. Each item names
 
 ## 12. Change log
 
+- **v2.8 (2026-11-25):** the schema principles review's decisions (D1–D8, owner, 2026-11-23 to 2026-11-25) reflected: overlapping runs an accepted risk with in-run retries of the publishing transaction (§6 overlap note, guardrail list). The table-level changes (foreign keys, mapping and lookup tables, descriptor columns) are in the ETL spec v2.27, §7.2, which this document does not repeat.
+- **v2.7 (2026-11-23):** at the owner's direction, pipeline runs are no longer coordinated; overlapping runs are handled by idempotent piece loads and next-run retry (ADR-0006, revised in place). *Claude's proposal, not confirmed by the owner:* each piece's ledger row written in its swap transaction. §5 data flow, §6 hard requirement 2, §6 overlap note and the guardrail table row updated.
 - **v2.6 (2026-11-19):** §10 "Risks and technical debt" added (owner-approved, from the arc42 gap analysis in `research/sadd-template-best-practices-research-2026-11-19.md`, with the register's form matching arc42 §11 (prioritized, mitigation per item)); growth triggers and the change log renumbered to §11/§12; the SADD template in `governance/templates.md` §3 rewritten the same day with per-section include/exclude rules.
 - **v2.5 (2026-11-19):** restructured as a standalone engineer reference at the owner's direction — table of contents added; change log moved here; sections reordered and renumbered (overview first, guardrail after requirements, hosting requirements and the pre-deployment hardening list under operations); internal references updated across the planning repo (frozen ADRs are never edited — their citations use the old numbering: old §0 → §3, old §3 → §4, old §4 → §5, old §5.5 → §6, old §6 → §8, old §8's pre-deployment list → §7). No decision or content change.
 - **v2.4 (2026-11-19):** hosting and deployment requirements consolidated into their own section (now §6) — stack, deployables, hard runtime requirements, workload profile, owner constraints — assembled now that the hosting decision is active (owner, 2026-11-19); previously these facts sat scattered across the requirements, overview and the ETL spec.

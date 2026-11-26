@@ -2,7 +2,7 @@
 
 **Loads nflverse's NFL data into MySQL tables that the Phase 1 screens read, keeps them current, and can rebuild every table from the source with one command.**
 
-**Last updated:** 2026-11-18 · consensus-rankings Later item dropped (owner: no third-party projection data; Q11 closed); governance correction: D10 and D12, closed on Claude's recommendation without explicit approval, ratified by the owner (statuses below). Earlier 2026-11-10 · Technical PRD, draft v2.2 · Owner: William Sanchez · v2.2: history starts in 2022 (ADR-0006, owner, 2026-11-10); build order matches the updated backend setup script. v2.1: moved from the online PRD doc; run history exposed through GraphQL (ADR-0017).
+**Last updated:** 2026-11-25 · spec v2.27: the schema principles review's decisions (review D1–D8; not built): foreign keys on every player and game reference; provider IDs in `player_source` / `game_source`; unidentifiable players loaded with an empty reference and counted, roster rows for players missing from `players.csv` excluded; lookup tables `stadium`, `position_group`, `position`; descriptor columns off fact rows; `play_participant`; past-season files version-checked every run; failed publishing transactions retried in the run. spec v2.25: descriptor columns off fact rows; no row-hash detection (owner; not built yet). spec v2.24: `player` and `game` load by upsert and keep rows absent from later files (owner; ADR-0006; not built yet); schema principles review filed (decision-log item 16). spec v2.23: transient request failures retried within the run (owner, 2026-11-24; not built yet). Earlier 2026-11-23 · spec v2.21: unbuilt checks and fallback marked (spec §4.2, §8); overlapping runs no longer prevented; expected to be safe, not yet tested (ADR-0006). Earlier 2026-11-18 · consensus-rankings Later item dropped (owner: no third-party projection data; Q11 closed); governance correction: D10 and D12, closed on Claude's recommendation without explicit approval, ratified by the owner (statuses below). Earlier 2026-11-10 · Technical PRD, draft v2.2 · Owner: William Sanchez · v2.2: history starts in 2022 (ADR-0006, owner, 2026-11-10); build order matches the updated backend setup script. v2.1: moved from the online PRD doc; run history exposed through GraphQL (ADR-0017).
 
 Its implementation spec is [`specs/ff-data-etl-storage-spec.md`](../specs/ff-data-etl-storage-spec.md), and the decisions behind it are ADR-0001 to ADR-0013 ([decision log](../design/architecture-decisions.md)). The API that reads its tables is GraphQL ([ADR-0017](../design/decisions/ADR-0017-use-graphql-for-the-backend-api.md)).
 
@@ -10,7 +10,7 @@ Its implementation spec is [`specs/ff-data-etl-storage-spec.md`](../specs/ff-dat
 
 |  |  |
 | --- | --- |
-| **Status** | **In use (local)** — pipeline operational: 2022 → current backfill loaded, daily ingest scheduled, spec at v2.18 ([ff-data-etl-storage-spec](../specs/ff-data-etl-storage-spec.md)) |
+| **Status** | **In use (local)** — pipeline operational: 2022 → current backfill loaded, daily ingest scheduled, spec at v2.27 ([ff-data-etl-storage-spec](../specs/ff-data-etl-storage-spec.md)) |
 | **Serves** | The Phase 1 screens (Player list, Player card, NFL scores and schedule) through the Express API, plus you as the operator |
 | **Viewing data** | Everything else reads from it. It's specified and built first |
 | **Making changes** | None. It only reads from nflverse |
@@ -32,7 +32,7 @@ If this layer is wrong, every screen above it is silently wrong. It also has to 
 - Kickers, team defenses and individual defensive players; practice-squad players only once they play (a weekly stats row)
 - A one-time backfill, then scheduled runs that load only data that can still change (ADR-0006)
 - Typed MySQL tables with natural keys, as designed in the spec (§7.2 and Appendix A). MySQL is the only store; raw downloads aren't kept (ADR-0005)
-- An ingest ledger and a run lock (ADR-0006), and a run history (spec §5.3)
+- An ingest ledger that commits with each load (ADR-0006), and a run history (spec §5.3)
 - Checks that run before a load is marked done
 
 **Where it stops:** at the MySQL tables. The API, the scoring and the screens sit outside it.
@@ -57,7 +57,7 @@ If this layer is wrong, every screen above it is silently wrong. It also has to 
 | Goal | Target |
 | --- | --- |
 | Full backfill, 2022–2026, with one command | Completes; resumes where it stopped; every piece recorded in the ledger |
-| Scheduled runs | Load only the current season's files and the single-file datasets; unchanged files are skipped |
+| Scheduled runs | Load the current season's files and the single-file datasets, and version-check every past-season file, reloading it when changed (spec v2.27; not built); unchanged files are skipped |
 | Freshness | Player list and stats no more than 24 hours old in season |
 | Safe re-runs | Loading the same piece twice gives identical tables; a run killed midway leaves the previous data intact |
 | Rebuild | Every table can be rebuilt by running the backfill again |
@@ -90,11 +90,11 @@ If this layer is wrong, every screen above it is silently wrong. It also has to 
 | --- | --- |
 | Every Phase 1 dataset loaded into its table (spec §7.2) | For each dataset: header read, table created, columns mapped, first load passes |
 | Backfill command | `npm run backfill -- --from 2022 --to 2026` loads every piece; a stopped backfill resumes |
-| Scheduled runs inside the Express backend's always-on process (ADR-0008) | Each run loads the current season's files and the single files; a file whose published version hasn't changed is skipped |
-| Ledger, lock and run history | One ledger row per dataset × season; a run that finds the lock taken exits and records the skip; every run is recorded |
+| Scheduled runs inside the Express backend's always-on process (ADR-0008) | Each run loads the current season's files and the single files, and version-checks past-season files (not built); a file whose published version hasn't changed is skipped |
+| Ledger and run history | One ledger row per dataset × season; no run lock; a failed publishing transaction is retried up to 2 more times in the run, each attempt logged (not built); every run is recorded |
 | Staging, then swap | A piece's rows are replaced in one transaction; a crash leaves the live table untouched |
 | Missing is never zero | Empty fields load as NULL; a stat that doesn't apply stays NULL |
-| Checks before a piece is marked loaded | A bad header, a repeated or empty key, a sharp drop in row count, or a team code with no row in `team` blocks the load; orphan player and game IDs, odd values and stale data only warn (spec §8) |
+| Checks before a piece is marked loaded | A bad header, a repeated or empty key, a sharp drop in row count, or a team code with no row in `team` blocks the load; orphan player and game IDs, odd values and stale data only warn today (spec §8). Decided, not built: player and game references block through foreign keys; unidentifiable snap and depth-chart rows load with an empty reference and are counted; roster rows for players missing from `players.csv` are excluded and counted (the odd-value and stale-data warnings are not built yet either) |
 
 ## Should have soon after
 
@@ -113,8 +113,8 @@ None. Monitoring and alerting get their own PRD in a later phase (decision log, 
 
 | Output | Contents |
 | --- | --- |
-| Entity tables | `player`, `game`, `team` |
-| Fact tables | `player_week_stat`, `team_week_stat`, `roster`, `injury_report`, `snap_count`; `depth_chart` and `play` for the current season |
+| Entity tables | `player`, `game`, `team`; decided, not built: `stadium`, lookups `source`, `position_group`, `position`, and mapping tables `player_source`, `game_source` |
+| Fact tables | `player_week_stat`, `team_week_stat`, `roster`, `injury_report`, `snap_count`; `depth_chart`, `play` and (decided, not built) `play_participant` for the current season |
 | Bookkeeping | `ingest_ledger` and `job_run`, exposed to operator accounts as the GraphQL fields `ingestLedger` and `pipelineRuns` (ADR-0017) |
 
 Freezing these table contracts is what lets the API and screens build against them before every load is finished.
@@ -125,9 +125,11 @@ Freezing these table contracts is what lets the API and screens build against th
 | --- | --- |
 | A load leaves partial data | Staging, then one transaction; a piece is marked loaded only after its checks pass |
 | nflverse changes a file's columns (injuries did in 2025) | Each file's header is read before mapping; a dataset without a mapping is skipped and reported |
-| GitHub's download host may not return version headers | Fall back to the file size plus a content hash recorded in the ledger |
+| A momentary network or server fault during a download | Retried within the run: up to 3 attempts with backoff for network errors, 5xx and 429; other 4xx fail at once. Not built yet (spec §4.2) |
+| GitHub's download host may not return version headers | Fall back to the file size plus a content hash recorded in the ledger. Not built: without an `ETag` the file reloads every run (spec §4.2) |
 | Jobs share the API's single Node process | Files are streamed and inserted in batches (ADR-0008) |
-| Snap counts identify players by Pro Football Reference ID | 99.91% of rows map to a player through `player.pfr_id`; the rest are reported |
+| Snap counts identify players by Pro Football Reference ID | 99.91% of rows map to a player through the player's PFR ID (`player.pfr_id` today; `player_source` once built); the rest load with an empty player reference and are counted |
+| Two runs overlap and an older copy of a file commits last | Accepted risk (owner, 2026-11-25): the next run sees the changed version and reloads it; no lock, no version check before publishing (spec §5.3) |
 | A rebuild returns today's published data, not an earlier copy | Accepted: nflverse corrects and republishes its files |
 | Point-in-time data that isn't captured is gone | The archiver isn't in Phase 1; nflverse's dated depth charts since 2025 cover part of it |
 
@@ -136,7 +138,7 @@ Freezing these table contracts is what lets the API and screens build against th
 | Measure | When it shows | Target |
 | --- | --- | --- |
 | Age of the player list and stats | Each run (`job_run`, ledger) | Never more than 24 hours old in season |
-| Scheduled runs that finish without a failed piece | Each run (`job_run`) | Every run; a failed piece is retried on the next run |
+| Scheduled runs that finish without a failed piece | Each run (`job_run`) | Every run; a failed publishing transaction is retried up to 2 more times in the run (not built), and a piece still failing is retried on the next run |
 | Backfill completeness | After the backfill | One `loaded` ledger row per dataset × season |
 
 *Targets: **Owner-approved** (the owner's D6/D7 decisions and the baselined PRD) · **Uncalibrated** — no formal measurements recorded; methods and observation windows are defined at calibration. The ledger and `job_run` instrument these, but instrumentation is not calibration.*
