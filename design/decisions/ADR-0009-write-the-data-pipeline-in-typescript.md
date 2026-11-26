@@ -4,7 +4,7 @@
 |---|---|
 | Status | Accepted |
 | Date | 2026-11-05 |
-| Revised | 2026-11-08, in place, at the owner's direction (not finalized): DuckDB and Postgres removed. The first version assumed DuckDB would do the data-heavy work and write to Postgres; the pipeline now parses files in TypeScript and loads MySQL directly (ADR-0012, ADR-0005) |
+| Revised | 2026-11-08, in place, at the owner's direction (not finalized): DuckDB and Postgres removed. The first version assumed DuckDB would do the data-heavy work and write to Postgres; the pipeline now parses files in TypeScript and loads MySQL directly (ADR-0012, ADR-0005); 2026-11-23, in place, at the owner's direction (not finalized): the run lock removed from the pipeline's description (ADR-0006) |
 | Decision-makers | Project owner |
 | Consulted | Claude (research and comparison) |
 | Confidence | High |
@@ -12,7 +12,7 @@
 | Related | ADR-0002 (Next.js); ADR-0005 (storage); ADR-0006 (load strategy); ADR-0008 (backend with in-process scheduler); ADR-0012 (no transform library); open question 3 |
 
 ## Context and problem statement
-The pipeline's language was left open by ADR-0002. ADR-0008 runs scheduled jobs inside the always-on Node.js Express backend; a pipeline in any other language must run as a separate program with its own runtime installed alongside. The pipeline downloads nflverse files over HTTPS, parses and maps them, and loads them into MySQL (ADR-0005), with no transform library (ADR-0012). It also covers the ingest ledger and run lock (ADR-0006), orchestration and tests, and later the Sleeper API.
+The pipeline's language was left open by ADR-0002. ADR-0008 runs scheduled jobs inside the always-on Node.js Express backend; a pipeline in any other language must run as a separate program with its own runtime installed alongside. The pipeline downloads nflverse files over HTTPS, parses and maps them, and loads them into MySQL (ADR-0005), with no transform library (ADR-0012). It also covers the ingest ledger (ADR-0006), orchestration and tests, and later the Sleeper API.
 
 ## Decision drivers
 - One runtime with the backend's in-process scheduler (ADR-0008).

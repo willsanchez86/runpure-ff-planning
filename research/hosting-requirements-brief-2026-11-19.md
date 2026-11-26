@@ -15,7 +15,7 @@ Sign-in is Firebase Authentication (external service; the backend verifies ID to
 ## Hard requirements — any option must satisfy all of these
 
 1. **Always-on backend compute.** An internal scheduler fires a daily 06:00 US-Eastern data ingest (multi-minute runs, streaming CSV downloads from GitHub releases). A later feature polls external APIs every ~60 seconds during NFL game windows. Platforms that sleep on idle, scale to zero, or cap execution to short-lived function invocations do not qualify.
-2. **Real MySQL 8 semantics**, specifically: `GET_LOCK`/`RELEASE_LOCK` named locks, session-scoped `TEMPORARY` tables, foreign-key constraints, transactions. MySQL-compatible engines qualify only if these are individually confirmed.
+2. **Real MySQL 8 semantics**, specifically: session-scoped `TEMPORARY` tables, foreign-key constraints, transactions. MySQL-compatible engines qualify only if these are individually confirmed.
 3. **Public HTTPS to the backend** (the browser calls the API directly; CORS pinned to the frontend origin), and HTTPS on the frontend.
 4. **Private or low-latency networking between backend and database** preferred; database reachable over TLS in production.
 5. **Outbound internet from the backend** to GitHub (data downloads) and Google/Firebase (token verification).

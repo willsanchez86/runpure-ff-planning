@@ -3,7 +3,7 @@
 .SYNOPSIS
   Initializes the Runpure FF backend repository: Express 5 + TypeScript, layered modular
   monolith, GraphQL endpoint (Yoga + Pothos, trusted documents), Firebase token check,
-  nflverse extract, MySQL load, ingest ledger, run lock, scheduler, backfill.
+  nflverse extract, MySQL load, ingest ledger, scheduler, backfill.
 
 .DESCRIPTION
   Creates the folder, runs git init, writes every source file, copies the code-repo kit
@@ -313,7 +313,7 @@ CREATE TABLE IF NOT EXISTS job_run (
   kind           ENUM('ingest','backfill') NOT NULL,
   started_at     DATETIME     NOT NULL,
   finished_at    DATETIME     NULL,
-  outcome        ENUM('running','ok','failed','skipped_locked') NOT NULL DEFAULT 'running',
+  outcome        ENUM('running','ok','failed') NOT NULL DEFAULT 'running',
   pieces_loaded  INT UNSIGNED NOT NULL DEFAULT 0,
   pieces_skipped INT UNSIGNED NOT NULL DEFAULT 0,
   pieces_failed  INT UNSIGNED NOT NULL DEFAULT 0,
@@ -418,7 +418,7 @@ src/
   app.ts                     Express app wiring
   server.ts                  Process entry: HTTP server + scheduler + shutdown
   config/env.ts              Environment variables
-  db/pool.ts, db/lock.ts     MySQL pool (UTC); GET_LOCK run lock (ADR-0006)
+  db/pool.ts                 MySQL pool (UTC)
   middleware/                request log, Firebase token check, error handler
   routes/index.ts            mounts /health and the GraphQL endpoint
   graphql/                   Pothos builder, schema, Yoga server, persisted store
@@ -560,25 +560,6 @@ export async function closePool(): Promise<void> {
     pool = undefined;
     await p.end();
   }
-}
-'@
-
-  Write-File 'src/db/lock.ts' @'
-/** MySQL named lock that keeps pipeline runs from overlapping (ADR-0006; ETL spec §5.3). */
-import type { PoolConnection, RowDataPacket } from 'mysql2/promise';
-
-/** Named MySQL lock shared by scheduled and backfill runs (ADR-0006). Held per connection. */
-export const PIPELINE_LOCK_NAME = 'runpure_pipeline_run';
-
-/** Takes the lock without waiting; true if taken. Release it on the same connection. */
-export async function tryAcquireLock(conn: PoolConnection, name = PIPELINE_LOCK_NAME): Promise<boolean> {
-  const [rows] = await conn.query<RowDataPacket[]>('SELECT GET_LOCK(?, 0) AS got', [name]);
-  return Number(rows[0]?.got) === 1;
-}
-
-/** Releases the lock this connection holds. */
-export async function releaseLock(conn: PoolConnection, name = PIPELINE_LOCK_NAME): Promise<void> {
-  await conn.query('SELECT RELEASE_LOCK(?)', [name]);
 }
 '@
 
@@ -978,7 +959,7 @@ export function createGraphQLServer(options: GraphQLServerOptions = {}) {
   # -------------------------------------------------------------------------
   Write-File 'src/modules/pipeline/model/pipeline.model.ts' @'
 /** Queries on ingest_ledger and job_run (ADR-0006; ETL spec §5.3; sql/0001_pipeline_tables.sql). */
-import type { Pool, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
+import type { Connection, Pool, ResultSetHeader, RowDataPacket } from 'mysql2/promise';
 
 // Timestamps are written with UTC_TIMESTAMP(): DATETIME values are UTC (ETL spec §7.2.2).
 
@@ -1031,9 +1012,15 @@ export interface LedgerUpsert {
   error?: string | null;
 }
 
-/** Inserts or updates a piece's ledger row. Status downloading restarts started_at and clears finished_at. */
-export async function upsertLedger(pool: Pool, u: LedgerUpsert): Promise<void> {
-  await pool.query(
+/** A piece's source identity and version: the ledger fields that don't depend on the load's result. */
+export type LedgerPiece = Omit<LedgerUpsert, 'status' | 'rowsLoaded' | 'error'>;
+
+/**
+ * Inserts or updates a piece's ledger row. Status downloading restarts started_at and clears finished_at.
+ * Pass the loading connection to write the row inside that connection's open transaction (ADR-0006).
+ */
+export async function upsertLedger(db: Pool | Connection, u: LedgerUpsert): Promise<void> {
+  await db.query(
     `INSERT INTO ingest_ledger
        (dataset, season, source_url, source_etag, source_last_modified, content_length,
         status, rows_loaded, error, started_at, finished_at)
@@ -1068,7 +1055,7 @@ export async function upsertLedger(pool: Pool, u: LedgerUpsert): Promise<void> {
 /** Kind of pipeline run. */
 export type JobKind = 'ingest' | 'backfill';
 /** Result of a pipeline run. */
-export type JobOutcome = 'running' | 'ok' | 'failed' | 'skipped_locked';
+export type JobOutcome = 'running' | 'ok' | 'failed';
 
 /** One job_run row. */
 export interface JobRunRow extends RowDataPacket {
@@ -1411,7 +1398,7 @@ export async function openCsv(url: string, gzip = false): Promise<AsyncIterable<
     relax_column_count: true,
   });
   // pipeline, unlike pipe, passes a download or gunzip error on to the parser, so the
-  // caller's loop over rows fails (and the run lock is released) instead of waiting forever.
+  // caller's loop over rows fails instead of waiting forever.
   const ignore = (): void => {};
   if (gzip) pipeline(source, createGunzip(), parser, ignore);
   else pipeline(source, parser, ignore);
@@ -1423,6 +1410,7 @@ export async function openCsv(url: string, gzip = false): Promise<AsyncIterable<
 /** Loads one piece through a staging table (ADR-0006; ETL spec §5.3). */
 import type { Pool } from 'mysql2/promise';
 import { env } from '../../../config/env.js';
+import { upsertLedger, type LedgerPiece } from '../model/pipeline.model.js';
 import type { ColumnSpec, DatasetDef } from './datasets.js';
 
 /** CSV tokens treated as NULL. nflverse files are written from R, which uses "NA". */
@@ -1440,18 +1428,21 @@ const id = (name: string): string => `\`${name.replace(/`/g, '``')}\``;
 
 /**
  * Loads one piece (dataset x season) into its table:
- *   1. rows stream into `<table>__staging` in batches;
+ *   1. rows stream into a session-scoped `<table>__staging` TEMPORARY table in batches;
  *   2. one transaction deletes the rows being replaced and copies staging in, or, for
- *      an upsert dataset (the team table), inserts new rows and updates existing ones;
+ *      an upsert dataset (the team table), inserts new rows and updates existing ones -
+ *      and, when `ledger` is given, marks the piece loaded in ingest_ledger;
  *   3. staging is dropped.
- * A crash before step 2 leaves the target untouched; the next run drops the leftover
- * staging table and starts again (ADR-0006).
+ * A crash before step 2 leaves the target untouched; the TEMPORARY staging is discarded when the
+ * connection closes, and an errored load destroys its connection so nothing lingers. The `loaded`
+ * ledger row commits or rolls back with the data (ADR-0006).
  */
 export async function loadPiece(
   pool: Pool,
   def: DatasetDef,
   season: number,
   records: AsyncIterable<Record<string, string>>,
+  ledger: LedgerPiece | null = null,
 ): Promise<number> {
   if (!def.table || !def.columns) {
     throw new Error(`dataset ${def.name} has no table/columns mapping`);
@@ -1467,9 +1458,10 @@ export async function loadPiece(
   const seasonColumn = def.seasonColumn ?? 'season';
 
   const conn = await pool.getConnection();
+  let ok = false;
   try {
-    await conn.query('DROP TABLE IF EXISTS ??', [staging]);
-    await conn.query('CREATE TABLE ?? LIKE ??', [staging, table]);
+    await conn.query('DROP TEMPORARY TABLE IF EXISTS ??', [staging]);
+    await conn.query('CREATE TEMPORARY TABLE ?? LIKE ??', [staging, table]);
 
     let batch: unknown[][] = [];
     let total = 0;
@@ -1495,35 +1487,38 @@ export async function loadPiece(
         await conn.query(
           `INSERT INTO ${id(table)} (${cols}) SELECT ${cols} FROM ${id(staging)} AS s ON DUPLICATE KEY UPDATE ${updates}`,
         );
-        await conn.commit();
-        await conn.query('DROP TABLE IF EXISTS ??', [staging]);
-        return total;
-      }
-      if (def.scope === 'history') {
-        await conn.query('DELETE FROM ?? WHERE ?? = ?', [table, seasonColumn, season]);
       } else {
-        // single_file: whole table replaced; current_season: previous season removed (ADR-0013)
-        await conn.query('DELETE FROM ??', [table]);
+        if (def.scope === 'history') {
+          await conn.query('DELETE FROM ?? WHERE ?? = ?', [table, seasonColumn, season]);
+        } else {
+          // single_file: whole table replaced; current_season: previous season removed (ADR-0013)
+          await conn.query('DELETE FROM ??', [table]);
+        }
+        await conn.query('INSERT INTO ?? (??) SELECT ?? FROM ??', [table, targetColumns, targetColumns, staging]);
       }
-      await conn.query('INSERT INTO ?? (??) SELECT ?? FROM ??', [table, targetColumns, targetColumns, staging]);
+      if (ledger) {
+        await upsertLedger(conn, { ...ledger, status: 'loaded', rowsLoaded: total, error: null });
+      }
       await conn.commit();
     } catch (err) {
       await conn.rollback();
       throw err;
     }
 
-    await conn.query('DROP TABLE IF EXISTS ??', [staging]);
+    await conn.query('DROP TEMPORARY TABLE IF EXISTS ??', [staging]);
+    ok = true;
     return total;
   } finally {
-    conn.release();
+    // On error, destroy rather than release, so no leftover temp table returns to the pool.
+    if (ok) conn.release();
+    else conn.destroy();
   }
 }
 '@
 
   Write-File 'src/modules/pipeline/service/ingest.service.ts' @'
-/** One pipeline run: lock, ledger, piece-by-piece load (ADR-0006). */
+/** One pipeline run: ledger, piece-by-piece load (ADR-0006). */
 import { getPool } from '../../../db/pool.js';
-import { releaseLock, tryAcquireLock } from '../../../db/lock.js';
 import {
   findLedger,
   finishJobRun,
@@ -1559,93 +1554,79 @@ export interface RunSummary {
 }
 
 /**
- * One pipeline run: take the run lock, record a job_run, then for every selected
- * dataset x season: check the source version, skip if unchanged, otherwise stream it
- * into MySQL and record the ledger row. A failed piece is recorded and the run goes on;
- * the next run retries it (ADR-0006).
+ * One pipeline run: record a job_run, then for every selected dataset x season: check the
+ * source version, skip if unchanged, otherwise stream it into MySQL, marking the ledger row
+ * loaded in the same transaction as the swap. A failed piece is recorded and the run goes on;
+ * the next run retries it. Runs are not coordinated; overlapping runs are expected to be safe
+ * because loads replace whole pieces, but that is not yet tested (ADR-0006).
  */
 export async function runPipeline(opts: RunOptions): Promise<RunSummary> {
   const pool = getPool();
   const summary: RunSummary = { jobRunId: null, outcome: 'running', loaded: 0, skipped: 0, failed: 0, details: [] };
 
-  const lockConn = await pool.getConnection();
-  try {
-    if (!(await tryAcquireLock(lockConn))) {
-      const id = await startJobRun(pool, opts.kind);
-      await finishJobRun(pool, id, 'skipped_locked', summary);
-      summary.jobRunId = id;
-      summary.outcome = 'skipped_locked';
-      summary.details.push('another run holds the pipeline lock; exiting');
-      return summary;
+  summary.jobRunId = await startJobRun(pool, opts.kind);
+  const selected = datasets.filter((d) => !opts.datasets || opts.datasets.includes(d.name));
+
+  for (const def of selected) {
+    if (!def.table || !def.columns) {
+      summary.skipped++;
+      summary.details.push(`${def.name}: no table/columns mapping yet, skipped`);
+      continue;
     }
 
-    summary.jobRunId = await startJobRun(pool, opts.kind);
-    const selected = datasets.filter((d) => !opts.datasets || opts.datasets.includes(d.name));
-
-    for (const def of selected) {
-      if (!def.table || !def.columns) {
-        summary.skipped++;
-        summary.details.push(`${def.name}: no table/columns mapping yet, skipped`);
-        continue;
-      }
-
-      for (const season of seasonsToLoad(def, opts.kind, opts.range)) {
-        const label = `${def.name} ${season === 0 ? 'all' : season}`;
-        const url = sourceUrl(def, season);
-        try {
-          const version = await headSource(url);
-          const previous = await findLedger(pool, def.name, season);
-          const unchanged =
-            !opts.force &&
-            previous?.status === 'loaded' &&
-            previous.source_etag !== null &&
-            previous.source_etag === version.etag;
-          if (unchanged) {
-            summary.skipped++;
-            summary.details.push(`${label}: unchanged (etag ${version.etag}), skipped`);
-            continue;
-          }
-
-          const base = {
-            dataset: def.name,
-            season,
-            sourceUrl: url,
-            etag: version.etag,
-            lastModified: version.lastModified,
-            contentLength: version.contentLength,
-          };
-          await upsertLedger(pool, { ...base, status: 'downloading' });
-          const records = await openCsv(url, def.gzip);
-          const rows = await loadPiece(pool, def, season, records);
-          await upsertLedger(pool, { ...base, status: 'loaded', rowsLoaded: rows, error: null });
-
-          summary.loaded++;
-          summary.details.push(`${label}: loaded ${rows} rows`);
-        } catch (err) {
-          const message = err instanceof Error ? err.message : String(err);
-          summary.failed++;
-          summary.details.push(`${label}: FAILED ${message}`);
-          await upsertLedger(pool, {
-            dataset: def.name,
-            season,
-            sourceUrl: url,
-            etag: null,
-            lastModified: null,
-            contentLength: null,
-            status: 'failed',
-            error: message,
-          }).catch((e) => console.error('could not record failure in ledger', e));
+    for (const season of seasonsToLoad(def, opts.kind, opts.range)) {
+      const label = `${def.name} ${season === 0 ? 'all' : season}`;
+      const url = sourceUrl(def, season);
+      try {
+        const version = await headSource(url);
+        const previous = await findLedger(pool, def.name, season);
+        const unchanged =
+          !opts.force &&
+          previous?.status === 'loaded' &&
+          previous.source_etag !== null &&
+          previous.source_etag === version.etag;
+        if (unchanged) {
+          summary.skipped++;
+          summary.details.push(`${label}: unchanged (etag ${version.etag}), skipped`);
+          continue;
         }
+
+        const base = {
+          dataset: def.name,
+          season,
+          sourceUrl: url,
+          etag: version.etag,
+          lastModified: version.lastModified,
+          contentLength: version.contentLength,
+        };
+        await upsertLedger(pool, { ...base, status: 'downloading' });
+        const records = await openCsv(url, def.gzip);
+        // loadPiece marks the ledger row loaded inside the swap transaction.
+        const rows = await loadPiece(pool, def, season, records, base);
+
+        summary.loaded++;
+        summary.details.push(`${label}: loaded ${rows} rows`);
+      } catch (err) {
+        const message = err instanceof Error ? err.message : String(err);
+        summary.failed++;
+        summary.details.push(`${label}: FAILED ${message}`);
+        await upsertLedger(pool, {
+          dataset: def.name,
+          season,
+          sourceUrl: url,
+          etag: null,
+          lastModified: null,
+          contentLength: null,
+          status: 'failed',
+          error: message,
+        }).catch((e) => console.error('could not record failure in ledger', e));
       }
     }
-
-    summary.outcome = summary.failed > 0 ? 'failed' : 'ok';
-    await finishJobRun(pool, summary.jobRunId, summary.outcome, summary);
-    return summary;
-  } finally {
-    await releaseLock(lockConn).catch(() => undefined);
-    lockConn.release();
   }
+
+  summary.outcome = summary.failed > 0 ? 'failed' : 'ok';
+  await finishJobRun(pool, summary.jobRunId, summary.outcome, summary);
+  return summary;
 }
 '@
 
@@ -1661,8 +1642,9 @@ import { runPipeline } from '../modules/pipeline/service/ingest.service.js';
 /**
  * In-process scheduler (ADR-0008; node-cron, ETL spec D12). It only holds schedules and
  * calls the ingest entry point, so moving jobs to a separate worker later means starting
- * the same entry point elsewhere. Overlap between runs is prevented by the MySQL run
- * lock, not here. Default: one run a day at 06:00 Eastern (D7).
+ * the same entry point elsewhere. Overlapping runs are safe without coordination here:
+ * loads replace whole pieces and the ledger commits with the data (ADR-0006).
+ * Default: one run a day at 06:00 Eastern (D7).
  */
 let stopping = false;
 const tasks: ScheduledTask[] = [];

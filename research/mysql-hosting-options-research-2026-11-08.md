@@ -21,12 +21,6 @@ Research only. No hosting decision has been made; hosting is a deployment-phase 
 | TiDB Cloud Starter | $0 | 5 GiB row + 5 GiB columnar | No (MySQL-compatible TiDB) | Daily, 1-day retention | 30-minute transaction limit; no triggers or stored routines | [plans](https://docs.pingcap.com/tidbcloud/select-cluster-tier); [limitations](https://docs.pingcap.com/tidbcloud/serverless-limitations/); [backups](https://docs.pingcap.com/tidbcloud/backup-and-restore-serverless/) |
 | PlanetScale (Vitess) | ~$39/mo | — | No (Vitess, MySQL 8 compatible) | Every 12 hours | No free plan; no stored routines | [plans](https://planetscale.com/docs/planetscale-plans); [compat](https://planetscale.com/docs/vitess/mysql-compatibility) |
 
-## `GET_LOCK()` on hosts
-
-- Stock MySQL hosts (Aiven, DigitalOcean, RDS, Cloud SQL, Azure, HeatWave, Railway): INFERENCE that it works; no provider page states it.
-- TiDB: supported with caveats (timeout clamped 1 s–1 h, no deadlock detection for user locks) ([TiDB locking functions](https://docs.pingcap.com/tidbcloud/locking-functions)).
-- PlanetScale/Vitess: UNVERIFIED.
-
 ## Backups beyond the host
 
 - `mysqldump --single-transaction` takes a consistent read of InnoDB tables after a brief initial lock ([MySQL 8.4 backup policy](https://docs.oracle.com/cd/E17952_01/mysql-8.4-en/backup-policy.html)).
