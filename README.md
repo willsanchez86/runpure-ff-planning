@@ -1,6 +1,6 @@
 # Runpure FF — planning
 
-Every planning document for Runpure FF (Fantasy Workbench): PRDs, system design, architecture decisions, implementation specs, research, templates and the rules that govern them. This repository is each document's only home. Code lives in separate repositories (`runpure-ff-backend`, `runpure-ff-frontend`; ADR-0008).
+Every planning document for Runpure FF (Fantasy Workbench): PRDs, system design, architecture decisions, implementation specs, research, templates and the rules that govern them. This repository is each document's only home. Code lives in separate repositories (`runpure-ff-backend`, `runpure-ff-frontend`; ADR-0008, which still holds after its 2026-11-27 revision).
 
 ## Contents
 

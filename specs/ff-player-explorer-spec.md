@@ -4,7 +4,7 @@
 
 **Date:** 2026-11-16 · **Version:** v1.0 · **Status:** Draft for owner review. No code exists yet.
 
-*Reconciled 2026-11-25 with ADR-0006 as revised (past-season version checks, upserted entity tables, in-run retries): no change needed here; history depth is still 2022 → current.*
+*Reconciled 2026-11-27 with ADR-0006 and ADR-0008 as revised in place (no run lock; every table upserted; past seasons version-checked; quarterly reconciliation): no change needed here.*
 **Companion to:** [`prds/feature-player-explorer.md`](../prds/feature-player-explorer.md) (the PRD this implements).
 **Builds on:** [`specs/ff-frontend-foundation-spec.md`](ff-frontend-foundation-spec.md) — shell, auth, data layer, settings, styling, scoring engine. Decisions F1–F8 and proposals P1–P8 there apply here and are not repeated.
 **Reference implementation:** [`prototypes/phase1/`](../prototypes/phase1/). This spec rebuilds its behavior exactly except where §12 says otherwise.

@@ -1,9 +1,13 @@
 # Implementation Spec — Data ETL & Storage
 
-**Date:** 2026-11-25 · **Version:** v2.27 · **Status:** Draft. This spec's own decisions are in §0.2 (D1–D16 here); the 2026-11-23 to 2026-11-25 schema and load decisions are the [schema principles review](../design/reviews/2026-11-24-schema-principles-review.md)'s "review D1–D8", cited with that prefix. Open: review O5, O6, O8, O10.
+**Date:** 2026-11-27 · **Version:** v2.29 · **Status:** Draft. This spec's own decisions are in §0.2 (D1–D16 here); the 2026-11-23 to 2026-11-25 schema and load decisions are the [schema principles review](../design/reviews/2026-11-24-schema-principles-review.md)'s "review D1–D8", cited with that prefix. Open: review O5, O6, O8, O10.
 **Companion to:** the Data ETL & storage technical PRD, [`prds/infra-data-etl-and-storage.md`](../prds/infra-data-etl-and-storage.md).
-**Implements:** ADR-0001 to ADR-0013, ADR-0017 for the operator query fields, and ADR-0022 to ADR-0027 for the schema principles review's table decisions (accepted 2026-11-25, not built) ([`design/architecture-decisions.md`](../design/architecture-decisions.md)).
+**Implements:** ADR-0001 to ADR-0013, ADR-0017 for the operator query fields, ADR-0022 to ADR-0027 for the schema principles review's table decisions, and ADR-0028 (upsert loads, quarterly reconciliation) and ADR-0029 (row timestamps) (accepted 2026-11-25 to 2026-11-27, not built) ([`design/architecture-decisions.md`](../design/architecture-decisions.md)).
 
+> **v2.29 (2026-11-27):** Owner's decisions: every table is loaded by upsert, never delete-and-replace; rows nflverse has removed are deleted only by a reconciliation run on January 1, April 1, July 1 and October 1 ([ADR-0028](../design/decisions/ADR-0028-load-every-table-by-upsert-and-reconcile-removed-rows-quarterly.md)); every table gets `created_at` and `updated_at`, set by the database in UTC ([ADR-0029](../design/decisions/ADR-0029-give-every-table-created-at-and-updated-at-columns-set-by-the-database.md)). ADR-0013 corrected: play-by-play and depth charts are recorded from the 2026 season on, with no backfill, and every season is kept; nothing removes a season. Not built yet.
+>
+> **v2.28 (2026-11-27):** Owner revised review D8 (ADR-0027): `play` keeps the play-by-play file's numbered player columns, each of the 22 player-ID columns with a foreign key to `player`; the 14 numbered team-code columns carry no foreign key, because MySQL allows 64 indexes per table. No `play_participant` table. `play` has 296 columns after the change (§7.2.1). Not built yet.
+>
 > **v2.27 (2026-11-25):** The schema principles review's 29 owner decisions are consolidated into review D1–D8 and reflected throughout: runs and retries (review D1; §4.2, §5.3), past-season version checks and upserted entity tables (review D2; §5.1), foreign keys on every player and game reference (review D3; §7.2.4, §8), provider-ID mapping tables `source`, `player_source`, `game_source` (review D4), unidentifiable players (review D5; §5.4, §8), lookup tables `stadium`, `position_group`, `position` (review D6), descriptor and duplicate columns off fact rows (review D7), `play_participant` (review D8). §7.2.1 lists every table as decided. Not built yet; the build is the [implementation plan](../design/reviews/2026-11-25-schema-review-implementation-plan.md), the database change its migration script (§13).
 >
 > **v2.26 (2026-11-25):** Owner's decisions on provider IDs, unidentifiable players, overlapping runs, past seasons, `team`, `game` and stadiums. Numbered review D8–D18 at the time; consolidated in v2.27 as review D1–D6.
@@ -70,7 +74,7 @@
 |---|---|
 | [ADR-0001](../design/decisions/ADR-0001-design-for-multiple-users-from-day-one.md) | Pipeline tables are shared reference data; account-owned rows (none in this pipeline) carry `user_id` |
 | [ADR-0003](../design/decisions/ADR-0003-use-independent-sources-with-sleeper-filling-specific-gaps.md) | nflverse is the base source; Sleeper only through its documented player list (parked, §4.3) |
-| [ADR-0004](../design/decisions/ADR-0004-keep-dated-copies-of-every-sleeper-player-list-pull.md) | Dated copies of every Sleeper player-list pull, kept in MySQL (ADR-0005). Parked with Sleeper |
+| [ADR-0004](../design/decisions/ADR-0004-record-sleeper-injury-and-depth-chart-status-as-change-history.md) | Sleeper's injury and depth-chart status kept as change history (one row per player per period without change), upserted with foreign keys; no raw copies. Parked with Sleeper
 | [ADR-0006](../design/decisions/ADR-0006-backfill-2022-2026-once-then-load-only-data-that-can-still-change.md) | One-time backfill, incremental runs, ingest ledger, staging then swap (§5) |
 | [ADR-0007](../design/decisions/ADR-0007-calculate-fantasy-points-in-the-app-from-stored-stats.md) | No fantasy-point columns stored; the app scores from stat lines |
 | [ADR-0009](../design/decisions/ADR-0009-write-the-data-pipeline-in-typescript.md) | Pipeline written in TypeScript on Node |
@@ -91,8 +95,8 @@ Also agreed (2026-11-06), not separate ADRs:
 | ID | Section | Decision |
 |---|---|---|
 | D1 | §1 | This spec lives with the ADRs, in the planning repo's `specs/` |
-| D2 | §4.1 | Seven datasets: weekly player stats, weekly team stats, schedules, players, season rosters, injuries and snap counts; plus play-by-play and depth charts for the current season (ADR-0013). Weekly rosters aren't loaded. Practice-squad players are left out unless they play. Kickers, team defenses and individual defensive players are included |
-| D3 | §4.1 | The current season's play-by-play is loaded to enable analytics later (ADR-0013) |
+| D2 | §4.1 | Seven datasets: weekly player stats, weekly team stats, schedules, players, season rosters, injuries and snap counts; plus play-by-play and depth charts from the 2026 season on (ADR-0013). Weekly rosters aren't loaded. Practice-squad players are left out unless they play. Kickers, team defenses and individual defensive players are included |
+| D3 | §4.1 | Play-by-play is loaded from the 2026 season on to enable analytics later (ADR-0013) |
 | D4 | §4.3 | Sleeper is set aside (owner, 2026-11-06); not in Phase 1 |
 | D5 | §5.1 | One ledger piece per dataset × season (ADR-0006) |
 | D8 | §5.3 | Out of scope: monitoring and alerting get their own PRD in a later phase (decision log, open item 7) |
@@ -184,8 +188,8 @@ The Phase 1 datasets (D2), plus the team file (D9a), and their CSV sizes for the
 | Schedules and scores | `schedules/games.csv` | single file | ~2 MB | All seasons in one file |
 | Players | `players/players.csv` | single file | ~7 MB | One file |
 | Teams | `teams/teams_colors_logos.csv` | single file | ~19 KB | One file (D9a) |
-| Depth charts | `depth_charts/depth_charts_<season>.csv` | current season | ~151 MB (71 MB for 2026 so far) | Current season only (ADR-0013) |
-| Play-by-play | `pbp/play_by_play_<season>.csv.gz` | current season | ~914 MB as CSV (94–100 MB per season) | Current season only (ADR-0013) |
+| Depth charts | `depth_charts/depth_charts_<season>.csv` | current season | ~151 MB (71 MB for 2026 so far) | 2026 season onward; every season kept (ADR-0013) |
+| Play-by-play | `pbp/play_by_play_<season>.csv.gz` | current season | ~914 MB as CSV (94–100 MB per season) | 2026 season onward; every season kept (ADR-0013) |
 
 - Use the `stats_player` release. The older `player_stats` release returned 404 for 2019, 2025 and 2026.
 - Since 2025, depth charts are dated snapshots, sourced from ESPN; they grow through the season.
@@ -196,7 +200,7 @@ The Phase 1 datasets (D2), plus the team file (D9a), and their CSV sizes for the
 - Kickers and individual defensive players (positions K, DB, DL and LB) come from weekly player stats; team defense comes from weekly team stats. No extra dataset is needed.
 - Practice-squad players are left out unless they play: a player is included once he has a weekly stats row. Season rosters mark practice squad as status `DEV` (*inference* from the code; the profiled status values are listed in Appendix A, section A6).
 
-**Play-by-play (D3):** the current season is loaded to enable analytics later (ADR-0013). Weekly stats come from `stats_player` (§0.1), not from play-by-play.
+**Play-by-play (D3):** loaded from the 2026 season on to enable analytics later; every season is kept (ADR-0013). Weekly stats come from `stats_player` (§0.1), not from play-by-play.
 
 ### 4.2 Verify at build
 
@@ -211,9 +215,9 @@ The Phase 1 datasets (D2), plus the team file (D9a), and their CSV sizes for the
 
 ### 4.3 Sleeper player list (parked)
 
-ADR-0003 uses Sleeper's documented player list for injury status, body part, practice participation and depth-chart order; ADR-0004 keeps a dated copy of every pull, in MySQL (ADR-0005). The owner set Sleeper aside on 2026-11-06 to focus on nflverse.
+ADR-0003 uses Sleeper's documented player list for injury status, body part, practice participation and depth-chart order; ADR-0004 records their changes as modeled history in MySQL once Sleeper is enabled (rewritten 2026-11-27; no raw copies). The owner set Sleeper aside on 2026-11-06 to focus on nflverse.
 
-Facts that bear on it: nflverse's injury files carry the official report status and practice participation back to 2009, and its depth charts have been dated since 2025. A daily copy of Sleeper's full list is about 5 MB, roughly 1.8 GB a year.
+Facts that bear on it: nflverse's injury files carry the official report status and practice participation back to 2009, and its depth charts have been dated since 2025. A daily copy of Sleeper's full list would be about 5 MB, roughly 1.8 GB a year; ADR-0004 keeps only status changes instead.
 
 **Decided (D4):** not in Phase 1; Sleeper is set aside (owner, 2026-11-06).
 
@@ -224,12 +228,12 @@ Facts that bear on it: nflverse's injury files carry the official report status 
 - **Backfill (once):** `npm run backfill -- --from 2022 --to 2026` (ADR-0006; `HISTORY_START_SEASON=2022`). Earlier seasons can be added later with an earlier `--from`. Loads every history dataset for each season, piece by piece. It's a command, never on the scheduler. Resumable: a piece already loaded with an unchanged source version is skipped.
 - **Incremental (each scheduled run):**
   - history datasets: the current season's file, and a version check on every past-season file (below);
-  - current-season datasets (pbp, depth charts): the current season's file;
+  - play-by-play and depth charts: the current season's file, and, once built, a version check on each earlier season from 2026 (ADR-0013);
   - single-file datasets: the whole file.
 
   Past seasons of history datasets: each run checks every past-season file's published version and reloads only a file whose version changed (review D2, ADR-0006; **not built yet**: the code still loads the current season only). nflverse republishes past-season files (weekly stats on 2026-11-25; snap counts on 2025-10-06).
 - **Stat corrections:** nflverse publishes one file per season, so the current season's file carries corrections to any week. ADR-0006's incremental load re-reads that file whenever its version changes, so corrections to any week are picked up.
-- **Season rollover:** loading a new season's pbp or depth-chart file replaces the whole table, which removes the previous season (ADR-0013). Deleting a play also deletes its `play_participant` rows (`ON DELETE CASCADE`; review D8, not built yet).
+- **Season rollover:** the new season's play-by-play and depth charts are added; earlier seasons from 2026 stay (ADR-0013). *Today's code still empties these two tables on every load; it is replaced by upsert ([ADR-0028](../design/decisions/ADR-0028-load-every-table-by-upsert-and-reconcile-removed-rows-quarterly.md), not built).*
 
 **Ledger grain (D5):** one piece per dataset × season, with season 0 for single files (ADR-0006).
 
@@ -280,7 +284,7 @@ What one run does, in order, as the backend implements it (`runpure-ff-backend`,
 1. On one connection, create the session-scoped `TEMPORARY` staging table `LIKE` the target.
 2. Insert rows into staging in batches (`LOAD_BATCH_SIZE`, default 1,000).
 3. Row-count check: if the staged count is below `previous rows × ROW_COUNT_MIN_RATIO` (default 0.5), staging is dropped and the piece fails, keeping the previous data (§8). The previous count is the ledger's `rows_loaded` when the row is `loaded`; otherwise there is nothing to compare and the check is skipped.
-4. One transaction: for `team`, insert new rows and update existing ones, deleting none; for a history dataset, delete that season's rows and insert from staging; for a single-file or current-season dataset, delete the whole table and insert from staging (for `player` and `game` this changes to the `team` upsert, review D2, not built yet). The ledger row is marked `loaded` with its row count inside the same transaction, then it commits. A foreign-key violation or deadlock rolls back all of it; once built, the transaction is retried up to 2 more times and each attempt logged (review D1).
+4. One transaction: for `team`, insert new rows and update existing ones, deleting none; for a history dataset, delete that season's rows and insert from staging; for a single-file or current-season dataset, delete the whole table and insert from staging (for `player` and `game` this changes to the `team` upsert, review D2, not built yet). The ledger row is marked `loaded` with its row count inside the same transaction, then it commits. A foreign-key violation or deadlock rolls back all of it; once built, the transaction is retried up to 2 more times and each attempt logged (review D1). **Decided 2026-11-27 ([ADR-0028](../design/decisions/ADR-0028-load-every-table-by-upsert-and-reconcile-removed-rows-quarterly.md)), not built:** every table is upserted the way `team` is; no load deletes rows; rows nflverse removed are deleted only by the quarterly reconciliation.
 5. Staging is dropped and the connection returned to the pool; after an error the connection is destroyed instead, so no staging table outlives it.
 6. Reference checks count player and game IDs with no parent row and record warnings; a reference whose parent table is empty is skipped (§8). *As built today; replaced by foreign keys (review D3), with only review D5's unidentifiable snap and depth-chart rows counted.*
 
@@ -317,7 +321,7 @@ All seasons of each dataset have the same columns, except injuries: from 2025 th
 
 **Provider IDs (owner, 2026-11-25; review D4; not built yet):** `source` (key `source_code`, 17 providers) lists ID providers. `player_source (gsis_id, source_code, source_player_id VARCHAR(64) ascii_bin NOT NULL)`, key `(gsis_id, source_code)`, `UNIQUE (source_code, source_player_id)`, foreign keys to `player` and `source`, holds a player's ID at each provider; the 7 ID columns on `player` and 11 on `roster` move there, `players.csv` winning conflicts, which are logged. `game_source` does the same for games (`game`'s 7 ID columns and `play.nfl_api_id`); an ID shared by two games is skipped and logged. `snap_count` keeps `pfr_player_id` and gains `source_code`, with the foreign key `(source_code, pfr_player_id)` → `player_source`.
 
-**Lookup tables (owner, 2026-11-25; review D6, D8; not built yet):** `stadium` (key `stadium_id`; `game.stadium` keeps the name the game was played under, taken from play-by-play where present); `position_group` (key `pos_grp_id`) and `position` (key `pos_id`) for depth charts; `play_participant` replaces `play`'s 60 numbered slot columns. `team` keeps `team_abbr` as its key. Every column of every table: the [migration script](../design/reviews/2026-11-24-schema-principles-review-migration.sql).
+**Lookup tables (owner, 2026-11-25; review D6, D8; not built yet):** `stadium` (key `stadium_id`; `game.stadium` keeps the name the game was played under, taken from play-by-play where present); `position_group` (key `pos_grp_id`) and `position` (key `pos_id`) for depth charts; `play` keeps its 60 numbered slot columns, with a foreign key on each of the 22 player-ID columns (ADR-0027). `team` keeps `team_abbr` as its key. Every column of every table: the [migration script](../design/reviews/2026-11-24-schema-principles-review-migration.sql).
 
 Each table states its grain (what one row is) before its columns ([Kimball, Declaring the Grain](https://www.kimballgroup.com/2003/03/declaring-the-grain/)). Things that exist on their own are entity tables in third normal form, so a player's birth date lives on the player, not on every weekly row ([Kent, A Simple Guide to Five Normal Forms](https://www.bkent.net/Doc/simple5.htm)). Measurements and events are fact tables keyed by those entities.
 
@@ -330,8 +334,8 @@ Each table states its grain (what one row is) before its columns ([Kimball, Decl
 | `roster` | `rosters` | Fact (membership) | One player on one team in one season | `season, team, gsis_id` | `player`, `team` | 36 (15 after review D4, D7) | 31,013 |
 | `injury_report` | `injuries` | Fact (event) | One player's report for one game week | `season, week, game_type, team, gsis_id` (latest report wins) | `player`, `team` | 17 (14 after review D7) | 53,262 |
 | `snap_count` | `snap_counts` | Fact | One player in one game | `game_id, pfr_player_id` | `game`, `team`; player via `player_source (source_code, pfr_player_id)` (review D4; today `player.pfr_id`) | 16 (13 after review D4, D7) | 240,602 |
-| `depth_chart` | `depth_charts` (current season) | Fact (dated snapshot) | One player in one depth-chart slot at one snapshot | `dt, team, pos_grp_id, pos_slot, pos_rank` | `player` (where `gsis_id` is present), `team`; after review D6: `position_group`, `position` | 12 (9 after review D6) | 763,791 |
-| `play` | `pbp` (current season) | Fact (event) | One play | `game_id, play_id` | `game`, `team`; after review D3: `player` (26 columns) | 372 (258 after review D4, D7, D8) | 70,118 (2025 + 2026) |
+| `depth_chart` | `depth_charts` (2026 on) | Fact (dated snapshot) | One player in one depth-chart slot at one snapshot | `dt, team, pos_grp_id, pos_slot, pos_rank` | `player` (where `gsis_id` is present), `team`; after review D6: `position_group`, `position` | 12 (9 after review D6) | 763,791 |
+| `play` | `pbp` (2026 on) | Fact (event) | One play | `game_id, play_id` | `game`, `team`; after review D3, D8: `player` (48 columns) | 372 (296 after review D4, D7) | 70,118 (2025 + 2026) |
 | `team` | `teams/teams_colors_logos.csv` | Entity | One team code | `team_abbr` | — | 16 | 36 |
 | `source` | Seeded by the migration | Lookup (review D4) | One ID provider | `source_code` | — | 2 | 17 |
 | `player_source` | `players.csv`, `rosters` | Mapping (review D4) | One player's ID at one provider | `gsis_id, source_code` | `player`, `source` | 3 | — |
@@ -339,7 +343,6 @@ Each table states its grain (what one row is) before its columns ([Kimball, Decl
 | `stadium` | `games.csv` | Entity (review D6) | One stadium | `stadium_id` | — | 2 | — |
 | `position_group` | `depth_charts` | Lookup (review D6) | One depth-chart formation | `pos_grp_id` | — | 2 | 4 (2025) |
 | `position` | `depth_charts` | Lookup (review D6) | One depth-chart position | `pos_id` | — | 3 | 31 (2025) |
-| `play_participant` | `pbp` (current season) | Fact (bridge, review D8) | One player in one role on one play | `game_id, play_id, role, seq` | `play`, `player`, `team` | 7 | — |
 
 Row counts above are from the 2017–2026 profile. Phase 1 loads 2022–2026 (ADR-0006), about half the rows of each seasonal table; §7.2.4 sizes that load.
 
@@ -355,6 +358,7 @@ Row counts above are from the 2017–2026 profile. Phase 1 loads 2022–2026 (AD
 | `DATE` for dates; `DATETIME` (or `DATETIME(3)` where the source has milliseconds) in UTC for timestamps; never `TIMESTAMP`, which ends in 2038; game-clock values (`mm:ss`) as short strings, with the numeric seconds columns used for arithmetic | [date and time types](https://dev.mysql.com/doc/refman/8.4/en/datetime.html) |
 | `ENUM` only for small closed sets (`season_type`, `game_type`, `location`, `team_conf`); team stays a code; depth-chart positions use the `position` and `position_group` lookups (review D6) | [ENUM type](https://dev.mysql.com/doc/refman/8.4/en/enum.html) |
 | Only primary-key columns (and the mapping tables' ID columns, review D4) are `NOT NULL`; per-column review is open (review O8) (the profile's 0.0%-empty is a snapshot live data violates); every other column is nullable, and a stat that doesn't apply stays `NULL`, never 0; strict SQL mode on | [optimizing data size](https://dev.mysql.com/doc/refman/8.4/en/data-size.html); [Kimball Design Tip #43](https://www.kimballgroup.com/2003/02/design-tip-43-dealing-with-nulls-in-the-dimensional-model/) |
+| Every table has `created_at` and `updated_at`, set by the database, in UTC (every connection's session time zone is UTC) | [ADR-0029](../design/decisions/ADR-0029-give-every-table-created-at-and-updated-at-columns-set-by-the-database.md) |
 | Wide tables stay as typed columns, not JSON; long text (the play description, up to 717 characters) is `TEXT` | [column count and row size limits](https://dev.mysql.com/doc/refman/8.4/en/column-count-limit.html); [JSON type](https://dev.mysql.com/doc/refman/8.4/en/json.html) |
 | Column names kept exactly as nflverse spells them (snake_case) | [SQL Style Guide](https://www.sqlstyle.guide/) |
 
@@ -402,9 +406,9 @@ The type rules hold a weekly stat row to about 390 bytes, against about 1,200 if
 **Team table (D9a):** nflverse's `teams/teams_colors_logos.csv` is loaded as `team` (36 codes, 16 columns; Appendix A, section A4), and screens get team names, colors and logos.
 
 **Foreign keys** (checked against real data, §7.2.3):
-- Every column that holds a team code has a database foreign key to `team.team_abbr`, except `play.side_of_field` (which also holds `50`) and `roster.draft_club` (which uses a different nflverse vocabulary, e.g. `AZ` for Arizona vs `ARI`; dropped under review D7). `play_participant.team` joins them (review D8). A code with no row in `team` otherwise blocks the load (§8).
+- Every column that holds a team code has a database foreign key to `team.team_abbr`, except `play.side_of_field` (which also holds `50`) and `roster.draft_club` (which uses a different nflverse vocabulary, e.g. `AZ` for Arizona vs `ARI`; dropped under review D7). Also excepted: `play`'s 14 numbered slot team-code columns (review D8, ADR-0027: MySQL's 64-index limit). A code with no row in `team` otherwise blocks the load (§8).
 - Player and game references (the "Points to" column above) carry no database foreign key **today**; the load checks them and warns (§8). Decided (not built): every player and game reference gets a foreign key (review D3); `player` and `game` are upserted and keep rows absent from later files (review D2); roster rows whose player isn't in `players.csv` are excluded during transform and counted, and other rows whose player can't be identified load with an empty reference and are counted (review D5).
-- MySQL checks a foreign key immediately and, by default, rejects deleting a parent row that child rows still reference ([MySQL 8.4, FOREIGN KEY constraints](https://dev.mysql.com/doc/refman/8.4/en/create-table-foreign-keys.html); [constraint differences](https://dev.mysql.com/doc/refman/8.4/en/ansi-diff-foreign-keys.html)). So `team` is loaded first and by upsert (insert new codes, update existing ones, delete none), not by delete-and-replace like the other single files. `player` and `game` follow the same rule (owner, 2026-11-24; not built yet: the code still deletes and replaces both). The new parents load before their children: `source` (seeded), `stadium` before `game`, `position_group` and `position` before `depth_chart`, `play` before `play_participant` (implementation plan §3).
+- MySQL checks a foreign key immediately and, by default, rejects deleting a parent row that child rows still reference ([MySQL 8.4, FOREIGN KEY constraints](https://dev.mysql.com/doc/refman/8.4/en/create-table-foreign-keys.html); [constraint differences](https://dev.mysql.com/doc/refman/8.4/en/ansi-diff-foreign-keys.html)). So `team` is loaded first and by upsert (insert new codes, update existing ones, delete none), not by delete-and-replace like the other single files. `player` and `game` follow the same rule (owner, 2026-11-24; not built yet: the code still deletes and replaces both). The new parents load before their children: `source` (seeded), `stadium` before `game`, `position_group` and `position` before `depth_chart`, (implementation plan §3).
 
 Each table's `CREATE TABLE` goes in a new `sql/000N_*.sql`, is run by hand (ADR-0011; Workbench preferred), and is then mapped in `datasets.ts`.
 
@@ -446,11 +450,11 @@ Runs inside each load, before a piece is marked `loaded` (ADR-0006).
 | `backfill` | Once, by hand (`npm run backfill`) | History load, resumable |
 | `headers` | On demand | Prints each dataset's columns for mapping; no database needed |
 
-**Schedule (D7):** one run a day at 06:00 Eastern (`PIPELINE_CRON=0 6 * * *`, `PIPELINE_TZ=America/New_York`, the scaffold's default). nflverse builds player stats nightly, so a game that ends near midnight is loaded by 06:00. No extra game-night runs.
+**Schedule (D7):** one run a day at 06:00 Eastern (`PIPELINE_CRON=0 6 * * *`, `PIPELINE_TZ=America/New_York`, the scaffold's default). nflverse builds player stats nightly, so a game that ends near midnight is loaded by 06:00. No extra game-night runs. **Quarterly reconciliation ([ADR-0028](../design/decisions/ADR-0028-load-every-table-by-upsert-and-reconcile-removed-rows-quarterly.md), not built):** January 1, April 1, July 1 and October 1, after the 06:00 run; for each loaded piece, rows whose key is no longer in nflverse's current file are deleted and counted; `team`, `player` and `game` are excluded.
 
 ## 10. Idempotency contract
 
-1. Every load is idempotent (replace or upsert, review D2); re-running any piece is always safe.
+1. Every load is idempotent: an upsert of the file's rows ([ADR-0028](../design/decisions/ADR-0028-load-every-table-by-upsert-and-reconcile-removed-rows-quarterly.md)); re-running any piece is always safe.
 2. Rebuilding the database means running the backfill again from the sources. Results match the sources as currently published, not a byte-identical earlier state; nflverse corrects and republishes its files.
 3. Each ledger row records when its piece was loaded and from which version of the source.
 

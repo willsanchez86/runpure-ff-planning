@@ -7,7 +7,7 @@
 
 ## 1. Where documents live
 
-**One home per document.** Every planning document lives in this repository (`runpure-ff-planning`), as markdown, under version control and the doc check. Code lives in separate repositories (`runpure-ff-backend`, `runpure-ff-frontend`; ADR-0008); a code repo may link to a planning document but never keeps its own copy.
+**One home per document.** Every planning document lives in this repository (`runpure-ff-planning`), as markdown, under version control and the doc check. Code lives in separate repositories (`runpure-ff-backend`, `runpure-ff-frontend`; ADR-0008, which still holds after its 2026-11-27 revision); a code repo may link to a planning document but never keeps its own copy.
 
 Earlier copies of the PRDs and the 2026-11-08 open-decisions review were online documents; they were moved here on 2026-11-09 and the online copies are no longer maintained.
 

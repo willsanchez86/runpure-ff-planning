@@ -555,7 +555,7 @@ Grain: one player in one game. Natural key: game_id, pfr_player_id. Profiled: 24
 | 15 | `st_snaps` | integer | 0.0% | 0 to 39 | TINYINT UNSIGNED | Number of snaps on special teams |
 | 16 | `st_pct` | decimal | 0.0% | 0 to 1.01 | DOUBLE | Percent of special teams snaps taken |
 
-## A9. Depth charts (`depth_charts`, current season)
+## A9. Depth charts (`depth_charts`, 2026 season on)
 
 *Target table after the review (not built): `pos_grp`, `pos_name`, `pos_abb` move to the `position_group` and `position` lookup tables, with foreign keys on `pos_grp_id` and `pos_id` (review D6); `gsis_id` gets a foreign key to `player` and, when empty, is filled from `espn_id` through `player_source` (review D3, D5); `player_name` stays.*
 
@@ -579,9 +579,9 @@ Grain: one player in one depth-chart slot at one dated snapshot. Natural key: dt
 | 12 | `pos_rank` | integer | 0.0% | 1 to 16 | TINYINT UNSIGNED | Player's rank on the depth chart within each pos_slot |
 
 
-## A10. Play-by-play (`pbp`, current season)
+## A10. Play-by-play (`pbp`, 2026 season on)
 
-*Target table after the review (not built): 28 game-level columns leave `play` (22 identical to `game`; `season_type` derivable; `start_time`, `weather`, `home_opening_kickoff`, `stadium` move to `game`; `nfl_api_id` to `game_source`); the 26 single-role player-name columns are not stored and their ID columns get foreign keys to `player`; the 60 numbered slot columns become `play_participant` rows; the 18 drive columns stay (review D3, D4, D7, D8). Column by column: the [migration script](../design/reviews/2026-11-24-schema-principles-review-migration.sql).*
+*Target table after the review (not built): 28 game-level columns leave `play` (22 identical to `game`; `season_type` derivable; `start_time`, `weather`, `home_opening_kickoff`, `stadium` move to `game`; `nfl_api_id` to `game_source`); the 26 single-role player-name columns are not stored and their ID columns get foreign keys to `player`; the 60 numbered slot columns stay, their 22 player-name columns are not stored, their 22 player-ID columns get foreign keys to `player`, and their 14 team-code columns carry no foreign key (ADR-0027); the 18 drive columns stay (review D3, D4, D7, D8). Column by column: the [migration script](../design/reviews/2026-11-24-schema-principles-review-migration.sql).*
 
 Descriptions: [nflreadr dictionary](https://ftp.fau.de/cran/web/packages/nflreadr/vignettes/dictionary_pbp.html). Field names and documented types are exact; many descriptions are paraphrased by the fetch tool, so treat them as approximate.
 

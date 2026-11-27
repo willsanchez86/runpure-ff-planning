@@ -8,8 +8,8 @@
 | Consulted | Claude (API research) |
 | Confidence | High |
 | Supersedes | None |
-| Revised | 2026-11-09, in place, at the owner's direction (not finalized): Sleeper's set-aside status recorded; spec section reference corrected |
-| Related | ADR-0004 (dated copies); Player explorer PRD (projections out of Phase 1); [`specs/ff-data-etl-storage-spec.md`](../../specs/ff-data-etl-storage-spec.md) §4.1, §4.3 |
+| Revised | 2026-11-09, in place, at the owner's direction (not finalized): Sleeper's set-aside status recorded; spec section reference corrected. 2026-11-27: reference to ADR-0004 updated after its rewrite |
+| Related | ADR-0004 (Sleeper status history); Player explorer PRD (projections out of Phase 1); [`specs/ff-data-etl-storage-spec.md`](../../specs/ff-data-etl-storage-spec.md) §4.1, §4.3 |
 
 ## Context and problem statement
 Phase 1 must populate the Player list, Player card and NFL scores and schedule screens with the data Sleeper shows. That data can come from Sleeper's own API, from independent sources such as nflverse, or from a mix. Parts of Sleeper's API (stats, projections) are undocumented. Its documented player list, `/players/nfl`, carries injury status, body part, practice participation and depth-chart order.

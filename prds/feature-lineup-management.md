@@ -4,6 +4,8 @@
 
 **Last updated:** 2026-11-18 · created by splitting Waivers & trades (owner, 2026-11-18) and absorbing the Game-day lineup center PRD into it (owner, 2026-11-18); [PRD review](../design/reviews/2026-11-18-chatgpt_PRD_Review_and_Recommendations.docx) applied the same day: live-data rule, legal-action validation, transaction states, waiver semantics, settings snapshots
 
+*Reconciled 2026-11-27 with ADR-0006 and ADR-0008 as revised in place (no run lock; every table upserted; past seasons version-checked; quarterly reconciliation): no change needed here.*
+
 ## At a glance
 
 |  |  |

@@ -2,13 +2,14 @@
 
 **Status:** Accepted
 **Date:** 2026-11-05
-**Revised:** 2026-11-08, in place, at the owner's direction (not finalized): this ADR now carries the decisions that replaced its earlier versions. First version (2026-11-05): an object storage bucket plus Postgres. Second (2026-11-05): a bucket plus MySQL. Current (2026-11-06): MySQL only, no bucket. 2026-11-09: **Rules out** line added for the doc check. 2026-11-23, in place, at the owner's direction (not finalized): the run lock removed from what MySQL holds (ADR-0006).
+**Revised:** 2026-11-08, in place, at the owner's direction (not finalized): this ADR now carries the decisions that replaced its earlier versions. First version (2026-11-05): an object storage bucket plus Postgres. Second (2026-11-05): a bucket plus MySQL. Current (2026-11-06): MySQL only, no bucket. 2026-11-09: **Rules out** line added for the doc check. 2026-11-23, in place, at the owner's direction (not finalized): the run lock removed from what MySQL holds (ADR-0006). 2026-11-27, in place, at the owner's direction (not finalized): Sleeper data is kept as modeled status history, not dated copies of the raw list (ADR-0004 rewritten).
+**Implementation started:** 2026-11-09 (added by Claude on 2026-11-27 at the owner's direction: first implemented in the backend's initial commit d6d28ce, 2026-11-09)
 **Deciders:** William Sanchez
 **Rules out:** object storage bucket; Parquet; Postgres; SQLite
 
 ## Context
 
-The pipeline produces app-ready tables, the ingest ledger ([ADR-0006](ADR-0006-backfill-2022-2026-once-then-load-only-data-that-can-still-change.md)), and the dated Sleeper player-list copies ([ADR-0004](ADR-0004-keep-dated-copies-of-every-sleeper-player-list-pull.md)). The app also stores user accounts and account-owned rows ([ADR-0001](ADR-0001-design-for-multiple-users-from-day-one.md)).
+The pipeline produces app-ready tables, the ingest ledger ([ADR-0006](ADR-0006-backfill-2022-2026-once-then-load-only-data-that-can-still-change.md)), and, once Sleeper is enabled, Sleeper's injury and depth-chart status history ([ADR-0004](ADR-0004-record-sleeper-injury-and-depth-chart-status-as-change-history.md)). The app also stores user accounts and account-owned rows ([ADR-0001](ADR-0001-design-for-multiple-users-from-day-one.md)).
 
 **Database engine.** The first version of this decision chose Postgres while comparing storage layouts, not engines. A comparison of the realistic engines followed:
 - **SQLite** serializes writers and fails the multi-user guardrail ([ADR-0001](ADR-0001-design-for-multiple-users-from-day-one.md)) once there is a second instance. It is not a production option.
@@ -19,16 +20,16 @@ The pipeline produces app-ready tables, the ingest ledger ([ADR-0006](ADR-0006-b
 
 **Raw files.** Earlier versions also kept raw downloads and dated copies in an object storage bucket. With no transform library ([ADR-0012](ADR-0012-transform-pipeline-data-in-typescript-and-mysql-with-no-transform-library.md)), the pipeline downloads each source file, parses it, and loads the result straight into MySQL.
 - **nflverse data** can be downloaded again at any time, so a saved raw copy only means we could rebuild without downloading again.
-- **The Sleeper player list** returns only the current state. The dated copies required by ADR-0004 are the only record of past days.
+- **The Sleeper player list** returns only the current state. The status history kept under ADR-0004 is the only record of past days.
 
 ## Decision
 
-**Use MySQL as the only store, with no object storage bucket: don't keep raw downloads, and keep ADR-0004's dated Sleeper player-list copies as rows in MySQL.** MySQL holds:
+**Use MySQL as the only store, with no object storage bucket: don't keep raw downloads, and keep Sleeper's status history (ADR-0004) as rows in MySQL.** MySQL holds:
 
 1. The app-ready tables the API reads.
 2. The ingest ledger from [ADR-0006](ADR-0006-backfill-2022-2026-once-then-load-only-data-that-can-still-change.md).
 3. User accounts and every account-owned row ([ADR-0001](ADR-0001-design-for-multiple-users-from-day-one.md)).
-4. The dated Sleeper player-list copies ([ADR-0004](ADR-0004-keep-dated-copies-of-every-sleeper-player-list-pull.md)).
+4. Sleeper's injury and depth-chart status history ([ADR-0004](ADR-0004-record-sleeper-injury-and-depth-chart-status-as-change-history.md)).
 
 ## Options Considered
 
@@ -57,13 +58,12 @@ Serializes writers, so it fails the multi-user guardrail once there is a second 
 **Harder / to revisit:**
 - Schema changes can't be rolled back as a unit, so each change must be safe to re-run or fix forward.
 - No saved raw files: a load error is fixed by downloading from the source again.
-- The dated Sleeper copies grow MySQL's storage. ADR-0004 estimates about 1.8 GB a year before compression if each full list is kept.
-- ADR-0004's confirmation is met by one dated set of rows per pull.
+- Sleeper's status history grows only when a player's status changes (ADR-0004).
 - The MySQL host is a deployment-phase decision.
 
 ## Relationship to other decisions
 
-- **Changes where** [ADR-0004](ADR-0004-keep-dated-copies-of-every-sleeper-player-list-pull.md)'s dated copies are kept: in MySQL. ADR-0004's decision is unchanged.
+- **Changes where** [ADR-0004](ADR-0004-record-sleeper-injury-and-depth-chart-status-as-change-history.md)'s status history is kept: in MySQL.
 - **Keeps** [ADR-0006](ADR-0006-backfill-2022-2026-once-then-load-only-data-that-can-still-change.md)'s ingest ledger in MySQL.
 - **Meets** the concurrent-writer requirement of [ADR-0001](ADR-0001-design-for-multiple-users-from-day-one.md).
 - **Paired with** [ADR-0010](ADR-0010-map-database-rows-to-code-by-hand-without-an-orm.md), which decides how the code talks to MySQL.

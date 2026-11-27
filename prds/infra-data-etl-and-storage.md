@@ -2,9 +2,9 @@
 
 **Loads nflverse's NFL data into MySQL tables that the Phase 1 screens read, keeps them current, and can rebuild every table from the source with one command.**
 
-**Last updated:** 2026-11-25 · spec v2.27: the schema principles review's decisions (review D1–D8; not built): foreign keys on every player and game reference; provider IDs in `player_source` / `game_source`; unidentifiable players loaded with an empty reference and counted, roster rows for players missing from `players.csv` excluded; lookup tables `stadium`, `position_group`, `position`; descriptor columns off fact rows; `play_participant`; past-season files version-checked every run; failed publishing transactions retried in the run. spec v2.25: descriptor columns off fact rows; no row-hash detection (owner; not built yet). spec v2.24: `player` and `game` load by upsert and keep rows absent from later files (owner; ADR-0006; not built yet); schema principles review filed (decision-log item 16). spec v2.23: transient request failures retried within the run (owner, 2026-11-24; not built yet). Earlier 2026-11-23 · spec v2.21: unbuilt checks and fallback marked (spec §4.2, §8); overlapping runs no longer prevented; expected to be safe, not yet tested (ADR-0006). Earlier 2026-11-18 · consensus-rankings Later item dropped (owner: no third-party projection data; Q11 closed); governance correction: D10 and D12, closed on Claude's recommendation without explicit approval, ratified by the owner (statuses below). Earlier 2026-11-10 · Technical PRD, draft v2.2 · Owner: William Sanchez · v2.2: history starts in 2022 (ADR-0006, owner, 2026-11-10); build order matches the updated backend setup script. v2.1: moved from the online PRD doc; run history exposed through GraphQL (ADR-0017).
+**Last updated:** 2026-11-27 · spec v2.29: every table loaded by upsert, with a quarterly reconciliation of rows nflverse removed (ADR-0028); `created_at`/`updated_at` on every table (ADR-0029); play-by-play and depth charts recorded from 2026 on, every season kept (ADR-0013 corrected); not built. spec v2.28: `play` keeps its numbered player columns, each player column with a foreign key; no `play_participant` table (ADR-0027 revised; not built). spec v2.27: the schema principles review's decisions (review D1–D8; not built): foreign keys on every player and game reference; provider IDs in `player_source` / `game_source`; unidentifiable players loaded with an empty reference and counted, roster rows for players missing from `players.csv` excluded; lookup tables `stadium`, `position_group`, `position`; descriptor columns off fact rows; past-season files version-checked every run; failed publishing transactions retried in the run. spec v2.25: descriptor columns off fact rows; no row-hash detection (owner; not built yet). spec v2.24: `player` and `game` load by upsert and keep rows absent from later files (owner; ADR-0006; not built yet); schema principles review filed (decision-log item 16). spec v2.23: transient request failures retried within the run (owner, 2026-11-24; not built yet). Earlier 2026-11-23 · spec v2.21: unbuilt checks and fallback marked (spec §4.2, §8); overlapping runs no longer prevented; expected to be safe, not yet tested (ADR-0006). Earlier 2026-11-18 · consensus-rankings Later item dropped (owner: no third-party projection data; Q11 closed); governance correction: D10 and D12, closed on Claude's recommendation without explicit approval, ratified by the owner (statuses below). Earlier 2026-11-10 · Technical PRD, draft v2.2 · Owner: William Sanchez · v2.2: history starts in 2022 (ADR-0006, owner, 2026-11-10); build order matches the updated backend setup script. v2.1: moved from the online PRD doc; run history exposed through GraphQL (ADR-0017).
 
-Its implementation spec is [`specs/ff-data-etl-storage-spec.md`](../specs/ff-data-etl-storage-spec.md), and the decisions behind it are ADR-0001 to ADR-0013 ([decision log](../design/architecture-decisions.md)). The API that reads its tables is GraphQL ([ADR-0017](../design/decisions/ADR-0017-use-graphql-for-the-backend-api.md)).
+Its implementation spec is [`specs/ff-data-etl-storage-spec.md`](../specs/ff-data-etl-storage-spec.md), and the decisions behind it are ADR-0001 to ADR-0013 and ADR-0022 to ADR-0029 ([decision log](../design/architecture-decisions.md)). The API that reads its tables is GraphQL ([ADR-0017](../design/decisions/ADR-0017-use-graphql-for-the-backend-api.md)).
 
 ## At a glance
 
@@ -28,7 +28,7 @@ If this layer is wrong, every screen above it is silently wrong. It also has to 
 **In scope (Phase 1)**
 
 - Seven nflverse datasets for 2022–2026: weekly player stats, weekly team stats, schedules, players, season rosters, injuries and snap counts, plus nflverse's team file for team names, colors and logos
-- Play-by-play and depth charts for the current season only (ADR-0013); play-by-play is kept to enable analytics later
+- Play-by-play and depth charts recorded from the 2026 season on, every season kept (ADR-0013); play-by-play is kept to enable analytics later
 - Kickers, team defenses and individual defensive players; practice-squad players only once they play (a weekly stats row)
 - A one-time backfill, then scheduled runs that load only data that can still change (ADR-0006)
 - Typed MySQL tables with natural keys, as designed in the spec (§7.2 and Appendix A). MySQL is the only store; raw downloads aren't kept (ADR-0005)
@@ -57,7 +57,7 @@ If this layer is wrong, every screen above it is silently wrong. It also has to 
 | Goal | Target |
 | --- | --- |
 | Full backfill, 2022–2026, with one command | Completes; resumes where it stopped; every piece recorded in the ledger |
-| Scheduled runs | Load the current season's files and the single-file datasets, and version-check every past-season file, reloading it when changed (spec v2.27; not built); unchanged files are skipped |
+| Scheduled runs | Load the current season's files and the single-file datasets, and version-check every past-season file, reloading it when changed (spec v2.27; not built); unchanged files are skipped; every load is an upsert, and rows nflverse removed are deleted by a reconciliation run on Jan 1, Apr 1, Jul 1 and Oct 1 (ADR-0028; not built) |
 | Freshness | Player list and stats no more than 24 hours old in season |
 | Safe re-runs | Loading the same piece twice gives identical tables; a run killed midway leaves the previous data intact |
 | Rebuild | Every table can be rebuilt by running the backfill again |
@@ -70,7 +70,7 @@ If this layer is wrong, every screen above it is silently wrong. It also has to 
 | --- | --- |
 | Fantasy-point columns | The app calculates points from stored stats (ADR-0007) |
 | Keeping raw downloads, or an object storage bucket | MySQL is the only store; a bad load is fixed by downloading again (ADR-0005) |
-| Past seasons of play-by-play and depth charts | Current season only (ADR-0013) |
+| Play-by-play and depth charts before 2026 | Not backfilled; recording starts with 2026 and every later season is kept (ADR-0013) |
 | Weekly rosters | No Phase 1 requirement needs them |
 | Reconciling play-by-play against weekly stats | nflverse already computes weekly stats from play-by-play (ADR-0013) |
 | League data from Sleeper, Yahoo and ESPN; the live game-day tier; source health | [Platform connections](infra-platform-connections.md) |
@@ -106,7 +106,7 @@ None. Monitoring and alerting get their own PRD in a later phase (decision log, 
 | --- | --- |
 | Odds: game lines and player props | Vendor not chosen |
 | Snapshot archiver | Not in Phase 1. When it starts, snapshots are stored as MySQL rows, as ADR-0005 does for other dated copies |
-| Sleeper player list | Set aside; ADR-0004 keeps dated copies once it's enabled |
+| Sleeper player list | Set aside; once enabled, ADR-0004 records injury and depth-chart status changes as history in MySQL |
 | Charting and tracking data (Next Gen Stats, FTN, participation, PFR advanced), coaching, weather | Not among the Phase 1 datasets |
 
 ## What it hands to other parts
@@ -114,7 +114,7 @@ None. Monitoring and alerting get their own PRD in a later phase (decision log, 
 | Output | Contents |
 | --- | --- |
 | Entity tables | `player`, `game`, `team`; decided, not built: `stadium`, lookups `source`, `position_group`, `position`, and mapping tables `player_source`, `game_source` |
-| Fact tables | `player_week_stat`, `team_week_stat`, `roster`, `injury_report`, `snap_count`; `depth_chart`, `play` and (decided, not built) `play_participant` for the current season |
+| Fact tables | `player_week_stat`, `team_week_stat`, `roster`, `injury_report`, `snap_count`; `depth_chart` and `play` from 2026 on |
 | Bookkeeping | `ingest_ledger` and `job_run`, exposed to operator accounts as the GraphQL fields `ingestLedger` and `pipelineRuns` (ADR-0017) |
 
 Freezing these table contracts is what lets the API and screens build against them before every load is finished.

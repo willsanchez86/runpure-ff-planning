@@ -5,6 +5,7 @@
 | Status | Accepted |
 | Date | 2026-11-05 |
 | Revised | 2026-11-08, in place, at the owner's direction (not finalized): DuckDB and Postgres removed. The first version assumed DuckDB would do the data-heavy work and write to Postgres; the pipeline now parses files in TypeScript and loads MySQL directly (ADR-0012, ADR-0005); 2026-11-23, in place, at the owner's direction (not finalized): the run lock removed from the pipeline's description (ADR-0006) |
+| Implementation started | 2026-11-09 (added by Claude on 2026-11-27 at the owner's direction: first implemented in the backend's initial commit d6d28ce, 2026-11-09) |
 | Decision-makers | Project owner |
 | Consulted | Claude (research and comparison) |
 | Confidence | High |

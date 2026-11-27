@@ -4,8 +4,8 @@
 -- implementation plan section 6. Tested 2026-11-25 on MySQL 8.4 (empty schema built from sql/0001-0014,
 -- plus a seeded sample covering every edge case); see the plan for the test record.
 --
--- WHAT IT DOES (in order): creates source, player_source, game_source, stadium, position_group, position,
--- play_participant; moves provider IDs, slot players and game facts into them; copies the few values only a
+-- WHAT IT DOES (in order): creates source, player_source, game_source, stadium, position_group, position;
+-- moves provider IDs and game facts into them; copies the few values only a
 -- fact row holds onto player/game; deletes roster rows whose player is not in `player` (decision D5);
 -- drops the descriptor, duplicate and provider-ID columns; adds every foreign key decided in D3.
 --
@@ -542,68 +542,8 @@ INSERT INTO migration_log (step, n) VALUES ('snap_count rows linked to a player 
 INSERT INTO migration_log (step, n)
 SELECT 'snap_count rows with an unknown PFR ID (loaded, counted: D5)', COUNT(*) FROM snap_count WHERE source_code IS NULL;
 
--- 11. play_participant: one row per player per role per play, from the 60 slot columns (D8; review Appendix A).
-CREATE TABLE play_participant (
-  game_id   VARCHAR(32) CHARACTER SET ascii NOT NULL,
-  play_id   SMALLINT UNSIGNED NOT NULL,
-  role      ENUM('assist_tackle', 'solo_tackle', 'tackle_with_assist', 'forced_fumble', 'fumbled', 'fumble_recovery', 'tackle_for_loss', 'qb_hit', 'pass_defense', 'half_sack') NOT NULL,
-  seq       TINYINT UNSIGNED NOT NULL,
-  player_id VARCHAR(10) CHARACTER SET ascii COLLATE ascii_bin NULL,
-  team      VARCHAR(4) CHARACTER SET ascii NULL,
-  yards     SMALLINT NULL,
-  PRIMARY KEY (game_id, play_id, role, seq),
-  KEY ix_play_participant_player (player_id),
-  CONSTRAINT fk_play_participant_play   FOREIGN KEY (game_id, play_id) REFERENCES play (game_id, play_id) ON DELETE CASCADE,
-  CONSTRAINT fk_play_participant_player FOREIGN KEY (player_id) REFERENCES player (gsis_id),
-  CONSTRAINT fk_play_participant_team   FOREIGN KEY (team) REFERENCES team (team_abbr)
-) ENGINE = InnoDB;
-INSERT INTO play_participant (game_id, play_id, role, seq, player_id, team, yards)
-SELECT game_id, play_id, 'assist_tackle', 1, assist_tackle_1_player_id, assist_tackle_1_team, NULL FROM play WHERE assist_tackle_1_player_id IS NOT NULL OR assist_tackle_1_team IS NOT NULL
-UNION ALL
-SELECT game_id, play_id, 'assist_tackle', 2, assist_tackle_2_player_id, assist_tackle_2_team, NULL FROM play WHERE assist_tackle_2_player_id IS NOT NULL OR assist_tackle_2_team IS NOT NULL
-UNION ALL
-SELECT game_id, play_id, 'assist_tackle', 3, assist_tackle_3_player_id, assist_tackle_3_team, NULL FROM play WHERE assist_tackle_3_player_id IS NOT NULL OR assist_tackle_3_team IS NOT NULL
-UNION ALL
-SELECT game_id, play_id, 'assist_tackle', 4, assist_tackle_4_player_id, assist_tackle_4_team, NULL FROM play WHERE assist_tackle_4_player_id IS NOT NULL OR assist_tackle_4_team IS NOT NULL
-UNION ALL
-SELECT game_id, play_id, 'solo_tackle', 1, solo_tackle_1_player_id, solo_tackle_1_team, NULL FROM play WHERE solo_tackle_1_player_id IS NOT NULL OR solo_tackle_1_team IS NOT NULL
-UNION ALL
-SELECT game_id, play_id, 'solo_tackle', 2, solo_tackle_2_player_id, solo_tackle_2_team, NULL FROM play WHERE solo_tackle_2_player_id IS NOT NULL OR solo_tackle_2_team IS NOT NULL
-UNION ALL
-SELECT game_id, play_id, 'tackle_with_assist', 1, tackle_with_assist_1_player_id, tackle_with_assist_1_team, NULL FROM play WHERE tackle_with_assist_1_player_id IS NOT NULL OR tackle_with_assist_1_team IS NOT NULL
-UNION ALL
-SELECT game_id, play_id, 'tackle_with_assist', 2, tackle_with_assist_2_player_id, tackle_with_assist_2_team, NULL FROM play WHERE tackle_with_assist_2_player_id IS NOT NULL OR tackle_with_assist_2_team IS NOT NULL
-UNION ALL
-SELECT game_id, play_id, 'forced_fumble', 1, forced_fumble_player_1_player_id, forced_fumble_player_1_team, NULL FROM play WHERE forced_fumble_player_1_player_id IS NOT NULL OR forced_fumble_player_1_team IS NOT NULL
-UNION ALL
-SELECT game_id, play_id, 'forced_fumble', 2, forced_fumble_player_2_player_id, forced_fumble_player_2_team, NULL FROM play WHERE forced_fumble_player_2_player_id IS NOT NULL OR forced_fumble_player_2_team IS NOT NULL
-UNION ALL
-SELECT game_id, play_id, 'fumbled', 1, fumbled_1_player_id, fumbled_1_team, NULL FROM play WHERE fumbled_1_player_id IS NOT NULL OR fumbled_1_team IS NOT NULL
-UNION ALL
-SELECT game_id, play_id, 'fumbled', 2, fumbled_2_player_id, fumbled_2_team, NULL FROM play WHERE fumbled_2_player_id IS NOT NULL OR fumbled_2_team IS NOT NULL
-UNION ALL
-SELECT game_id, play_id, 'fumble_recovery', 1, fumble_recovery_1_player_id, fumble_recovery_1_team, fumble_recovery_1_yards FROM play WHERE fumble_recovery_1_player_id IS NOT NULL OR fumble_recovery_1_team IS NOT NULL OR fumble_recovery_1_yards IS NOT NULL
-UNION ALL
-SELECT game_id, play_id, 'fumble_recovery', 2, fumble_recovery_2_player_id, fumble_recovery_2_team, fumble_recovery_2_yards FROM play WHERE fumble_recovery_2_player_id IS NOT NULL OR fumble_recovery_2_team IS NOT NULL OR fumble_recovery_2_yards IS NOT NULL
-UNION ALL
-SELECT game_id, play_id, 'tackle_for_loss', 1, tackle_for_loss_1_player_id, NULL, NULL FROM play WHERE tackle_for_loss_1_player_id IS NOT NULL
-UNION ALL
-SELECT game_id, play_id, 'tackle_for_loss', 2, tackle_for_loss_2_player_id, NULL, NULL FROM play WHERE tackle_for_loss_2_player_id IS NOT NULL
-UNION ALL
-SELECT game_id, play_id, 'qb_hit', 1, qb_hit_1_player_id, NULL, NULL FROM play WHERE qb_hit_1_player_id IS NOT NULL
-UNION ALL
-SELECT game_id, play_id, 'qb_hit', 2, qb_hit_2_player_id, NULL, NULL FROM play WHERE qb_hit_2_player_id IS NOT NULL
-UNION ALL
-SELECT game_id, play_id, 'pass_defense', 1, pass_defense_1_player_id, NULL, NULL FROM play WHERE pass_defense_1_player_id IS NOT NULL
-UNION ALL
-SELECT game_id, play_id, 'pass_defense', 2, pass_defense_2_player_id, NULL, NULL FROM play WHERE pass_defense_2_player_id IS NOT NULL
-UNION ALL
-SELECT game_id, play_id, 'half_sack', 1, half_sack_1_player_id, NULL, NULL FROM play WHERE half_sack_1_player_id IS NOT NULL
-UNION ALL
-SELECT game_id, play_id, 'half_sack', 2, half_sack_2_player_id, NULL, NULL FROM play WHERE half_sack_2_player_id IS NOT NULL;
-INSERT INTO migration_log (step, n) VALUES ('play_participant rows', ROW_COUNT());
-
--- 12. Drop moved, descriptor and duplicate columns (D4, D6, D7, D8). Foreign keys on dropped columns go first.
+-- 11. Drop moved, descriptor and duplicate columns (D4, D6, D7). Also drops the foreign keys on play's 14 numbered
+--     slot team columns (the columns stay): MySQL allows 64 indexes per table, and play needs 55 without them (D8). Foreign keys on dropped columns go first.
 ALTER TABLE play
   DROP FOREIGN KEY fk_play_assist_tackle_1_team,
   DROP FOREIGN KEY fk_play_assist_tackle_2_team,
@@ -621,6 +561,22 @@ ALTER TABLE play
   DROP FOREIGN KEY fk_play_fumble_recovery_2_team,
   DROP FOREIGN KEY fk_play_home_team,
   DROP FOREIGN KEY fk_play_away_team;
+-- Dropping a foreign key keeps its index; the 14 slot-team indexes are dropped too, or they still count toward 64.
+ALTER TABLE play
+  DROP INDEX fk_play_assist_tackle_1_team,
+  DROP INDEX fk_play_assist_tackle_2_team,
+  DROP INDEX fk_play_assist_tackle_3_team,
+  DROP INDEX fk_play_assist_tackle_4_team,
+  DROP INDEX fk_play_solo_tackle_1_team,
+  DROP INDEX fk_play_solo_tackle_2_team,
+  DROP INDEX fk_play_tackle_with_assist_1_team,
+  DROP INDEX fk_play_tackle_with_assist_2_team,
+  DROP INDEX fk_play_forced_fumble_1_team,
+  DROP INDEX fk_play_forced_fumble_2_team,
+  DROP INDEX fk_play_fumbled_1_team,
+  DROP INDEX fk_play_fumbled_2_team,
+  DROP INDEX fk_play_fumble_recovery_1_team,
+  DROP INDEX fk_play_fumble_recovery_2_team;
 ALTER TABLE player
   DROP COLUMN esb_id,
   DROP COLUMN nfl_id,
@@ -707,65 +663,27 @@ ALTER TABLE play
   DROP COLUMN home_opening_kickoff,
   DROP COLUMN stadium,
   DROP COLUMN nfl_api_id,
-  DROP COLUMN assist_tackle_1_player_id,
   DROP COLUMN assist_tackle_1_player_name,
-  DROP COLUMN assist_tackle_1_team,
-  DROP COLUMN assist_tackle_2_player_id,
   DROP COLUMN assist_tackle_2_player_name,
-  DROP COLUMN assist_tackle_2_team,
-  DROP COLUMN assist_tackle_3_player_id,
   DROP COLUMN assist_tackle_3_player_name,
-  DROP COLUMN assist_tackle_3_team,
-  DROP COLUMN assist_tackle_4_player_id,
   DROP COLUMN assist_tackle_4_player_name,
-  DROP COLUMN assist_tackle_4_team,
-  DROP COLUMN solo_tackle_1_player_id,
   DROP COLUMN solo_tackle_1_player_name,
-  DROP COLUMN solo_tackle_1_team,
-  DROP COLUMN solo_tackle_2_player_id,
   DROP COLUMN solo_tackle_2_player_name,
-  DROP COLUMN solo_tackle_2_team,
-  DROP COLUMN tackle_with_assist_1_player_id,
   DROP COLUMN tackle_with_assist_1_player_name,
-  DROP COLUMN tackle_with_assist_1_team,
-  DROP COLUMN tackle_with_assist_2_player_id,
   DROP COLUMN tackle_with_assist_2_player_name,
-  DROP COLUMN tackle_with_assist_2_team,
-  DROP COLUMN forced_fumble_player_1_player_id,
   DROP COLUMN forced_fumble_player_1_player_name,
-  DROP COLUMN forced_fumble_player_1_team,
-  DROP COLUMN forced_fumble_player_2_player_id,
   DROP COLUMN forced_fumble_player_2_player_name,
-  DROP COLUMN forced_fumble_player_2_team,
-  DROP COLUMN fumbled_1_player_id,
   DROP COLUMN fumbled_1_player_name,
-  DROP COLUMN fumbled_1_team,
-  DROP COLUMN fumbled_2_player_id,
   DROP COLUMN fumbled_2_player_name,
-  DROP COLUMN fumbled_2_team,
-  DROP COLUMN fumble_recovery_1_player_id,
   DROP COLUMN fumble_recovery_1_player_name,
-  DROP COLUMN fumble_recovery_1_team,
-  DROP COLUMN fumble_recovery_1_yards,
-  DROP COLUMN fumble_recovery_2_player_id,
   DROP COLUMN fumble_recovery_2_player_name,
-  DROP COLUMN fumble_recovery_2_team,
-  DROP COLUMN fumble_recovery_2_yards,
-  DROP COLUMN tackle_for_loss_1_player_id,
   DROP COLUMN tackle_for_loss_1_player_name,
-  DROP COLUMN tackle_for_loss_2_player_id,
   DROP COLUMN tackle_for_loss_2_player_name,
-  DROP COLUMN qb_hit_1_player_id,
   DROP COLUMN qb_hit_1_player_name,
-  DROP COLUMN qb_hit_2_player_id,
   DROP COLUMN qb_hit_2_player_name,
-  DROP COLUMN pass_defense_1_player_id,
   DROP COLUMN pass_defense_1_player_name,
-  DROP COLUMN pass_defense_2_player_id,
   DROP COLUMN pass_defense_2_player_name,
-  DROP COLUMN half_sack_1_player_id,
   DROP COLUMN half_sack_1_player_name,
-  DROP COLUMN half_sack_2_player_id,
   DROP COLUMN half_sack_2_player_name,
   DROP COLUMN td_player_name,
   DROP COLUMN passer_player_name,
@@ -793,9 +711,9 @@ ALTER TABLE play
   DROP COLUMN receiver,
   DROP COLUMN fantasy,
   DROP COLUMN `name`;
-INSERT INTO migration_log (step, n) VALUES ('columns dropped', 164);
+INSERT INTO migration_log (step, n) VALUES ('columns dropped', 126);
 
--- 13. Foreign keys on every player and game reference (D3) and on the new lookups (D6).
+-- 12. Foreign keys on every player and game reference (D3), including play's 22 numbered player-ID columns (D8), and on the new lookups (D6).
 ALTER TABLE game
   ADD CONSTRAINT fk_game_away_qb FOREIGN KEY (away_qb_id) REFERENCES player (gsis_id),
   ADD CONSTRAINT fk_game_home_qb FOREIGN KEY (home_qb_id) REFERENCES player (gsis_id),
@@ -843,8 +761,90 @@ ALTER TABLE play
   ADD CONSTRAINT fk_play_rusher_id FOREIGN KEY (rusher_id) REFERENCES player (gsis_id),
   ADD CONSTRAINT fk_play_receiver_id FOREIGN KEY (receiver_id) REFERENCES player (gsis_id),
   ADD CONSTRAINT fk_play_fantasy_id FOREIGN KEY (fantasy_id) REFERENCES player (gsis_id),
-  ADD CONSTRAINT fk_play_id_player FOREIGN KEY (`id`) REFERENCES player (gsis_id);
-INSERT INTO migration_log (step, n) VALUES ('foreign keys added', 40);
+  ADD CONSTRAINT fk_play_id_player FOREIGN KEY (`id`) REFERENCES player (gsis_id),
+  ADD CONSTRAINT fk_play_assist_tackle_1_player FOREIGN KEY (assist_tackle_1_player_id) REFERENCES player (gsis_id),
+  ADD CONSTRAINT fk_play_assist_tackle_2_player FOREIGN KEY (assist_tackle_2_player_id) REFERENCES player (gsis_id),
+  ADD CONSTRAINT fk_play_assist_tackle_3_player FOREIGN KEY (assist_tackle_3_player_id) REFERENCES player (gsis_id),
+  ADD CONSTRAINT fk_play_assist_tackle_4_player FOREIGN KEY (assist_tackle_4_player_id) REFERENCES player (gsis_id),
+  ADD CONSTRAINT fk_play_solo_tackle_1_player FOREIGN KEY (solo_tackle_1_player_id) REFERENCES player (gsis_id),
+  ADD CONSTRAINT fk_play_solo_tackle_2_player FOREIGN KEY (solo_tackle_2_player_id) REFERENCES player (gsis_id),
+  ADD CONSTRAINT fk_play_tackle_with_assist_1_player FOREIGN KEY (tackle_with_assist_1_player_id) REFERENCES player (gsis_id),
+  ADD CONSTRAINT fk_play_tackle_with_assist_2_player FOREIGN KEY (tackle_with_assist_2_player_id) REFERENCES player (gsis_id),
+  ADD CONSTRAINT fk_play_forced_fumble_player_1_player FOREIGN KEY (forced_fumble_player_1_player_id) REFERENCES player (gsis_id),
+  ADD CONSTRAINT fk_play_forced_fumble_player_2_player FOREIGN KEY (forced_fumble_player_2_player_id) REFERENCES player (gsis_id),
+  ADD CONSTRAINT fk_play_fumbled_1_player FOREIGN KEY (fumbled_1_player_id) REFERENCES player (gsis_id),
+  ADD CONSTRAINT fk_play_fumbled_2_player FOREIGN KEY (fumbled_2_player_id) REFERENCES player (gsis_id),
+  ADD CONSTRAINT fk_play_fumble_recovery_1_player FOREIGN KEY (fumble_recovery_1_player_id) REFERENCES player (gsis_id),
+  ADD CONSTRAINT fk_play_fumble_recovery_2_player FOREIGN KEY (fumble_recovery_2_player_id) REFERENCES player (gsis_id),
+  ADD CONSTRAINT fk_play_tackle_for_loss_1_player FOREIGN KEY (tackle_for_loss_1_player_id) REFERENCES player (gsis_id),
+  ADD CONSTRAINT fk_play_tackle_for_loss_2_player FOREIGN KEY (tackle_for_loss_2_player_id) REFERENCES player (gsis_id),
+  ADD CONSTRAINT fk_play_qb_hit_1_player FOREIGN KEY (qb_hit_1_player_id) REFERENCES player (gsis_id),
+  ADD CONSTRAINT fk_play_qb_hit_2_player FOREIGN KEY (qb_hit_2_player_id) REFERENCES player (gsis_id),
+  ADD CONSTRAINT fk_play_pass_defense_1_player FOREIGN KEY (pass_defense_1_player_id) REFERENCES player (gsis_id),
+  ADD CONSTRAINT fk_play_pass_defense_2_player FOREIGN KEY (pass_defense_2_player_id) REFERENCES player (gsis_id),
+  ADD CONSTRAINT fk_play_half_sack_1_player FOREIGN KEY (half_sack_1_player_id) REFERENCES player (gsis_id),
+  ADD CONSTRAINT fk_play_half_sack_2_player FOREIGN KEY (half_sack_2_player_id) REFERENCES player (gsis_id);
+INSERT INTO migration_log (step, n) VALUES ('foreign keys added', 62);
+
+-- 13. Row timestamps on every table (ADR-0029): set by the database, UTC because this session is UTC.
+--     Existing rows get this migration's time as created_at ("present when the columns were added").
+ALTER TABLE team
+  ADD COLUMN created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
+ALTER TABLE player
+  ADD COLUMN created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
+ALTER TABLE game
+  ADD COLUMN created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
+ALTER TABLE player_week_stat
+  ADD COLUMN created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
+ALTER TABLE team_week_stat
+  ADD COLUMN created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
+ALTER TABLE roster
+  ADD COLUMN created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
+ALTER TABLE injury_report
+  ADD COLUMN created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
+ALTER TABLE snap_count
+  ADD COLUMN created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
+ALTER TABLE depth_chart
+  ADD COLUMN created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
+ALTER TABLE play
+  ADD COLUMN created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
+ALTER TABLE source
+  ADD COLUMN created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
+ALTER TABLE player_source
+  ADD COLUMN created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
+ALTER TABLE game_source
+  ADD COLUMN created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
+ALTER TABLE stadium
+  ADD COLUMN created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
+ALTER TABLE position_group
+  ADD COLUMN created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
+ALTER TABLE position
+  ADD COLUMN created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
+ALTER TABLE ingest_ledger
+  ADD COLUMN created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
+ALTER TABLE job_run
+  ADD COLUMN created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
+ALTER TABLE users
+  ADD COLUMN updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP;
+INSERT INTO migration_log (step, n) VALUES ('tables given created_at/updated_at', 19);
 
 -- Result: one grid of counts. SKIPPED/LOGGED rows are values not stored (D4); DELETED is D5's roster exclusion.
 SELECT step, n FROM migration_log ORDER BY id;

@@ -3,6 +3,7 @@
 **Status:** Accepted
 **Date:** 2026-11-06
 **Revised:** 2026-11-08, in place, at the owner's direction (not finalized): references to ADR-0009's earlier DuckDB assumption updated; data size added. 2026-11-09: Option B's wording aligned with the sized data. 2026-11-09: **Rules out** line added for the doc check. 2026-11-10, in place, at the owner's direction (not finalized): load size updated for the 2022–2026 backfill (ADR-0006).
+**Implementation started:** 2026-11-09 (added by Claude on 2026-11-27 at the owner's direction: first implemented in the backend's initial commit d6d28ce, 2026-11-09)
 **Deciders:** William Sanchez
 **Rules out:** DuckDB; transform library
 

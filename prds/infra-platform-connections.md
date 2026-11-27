@@ -4,6 +4,8 @@
 
 **Last updated:** 2026-11-18 · aligned to the Overview's capability-contract and verified-platform-action terms (owner's 2026-11-18 shared contract); same day, open-question statuses updated from the [platform API research](../research/platform-apis-sleeper-yahoo-espn-research-2026-11-18.md) and the owner's pending decisions listed in the [2026-11-18 open-decisions review](../design/reviews/2026-11-18-platform-integration-open-decisions.md). Earlier 2026-11-12 · reviewed against ADR-0008 (no change needed). 2026-11-09: · moved from the online PRD doc; links updated. Shared platform facts and terms: [Overview](00-overview.md).
 
+*Reconciled 2026-11-27 with ADR-0006 and ADR-0008 as revised in place (no run lock; every table upserted; past seasons version-checked; quarterly reconciliation): no change needed here.*
+
 ## At a glance
 
 |  |  |

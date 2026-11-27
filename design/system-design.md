@@ -1,6 +1,6 @@
 # System Design — Fantasy Workbench (Runpure FF)
 
-**Status:** Draft v2.8 · **Owner:** William Sanchez · **Date:** 2026-11-25
+**Status:** Draft v2.9 · **Owner:** William Sanchez · **Date:** 2026-11-27
 **Purpose:** how the system is put together: components, boundaries, data flow, and how the multi-user guardrail is met. Each choice is decided in an ADR (`design/decisions/`); this document puts them in one picture and cites them inline. It decides nothing itself.
 **Inputs:** PRDs (`prds/`), [`specs/ff-data-etl-storage-spec.md`](../specs/ff-data-etl-storage-spec.md), decision log [`design/architecture-decisions.md`](architecture-decisions.md). The change log is at the end (§12).
 
@@ -126,7 +126,7 @@ Firm, from ADR-0001. **Rule:** the app launches with one user (you), but no desi
 | Language | TypeScript on Node | ADR-0008, ADR-0009 |
 | Storage | MySQL only, no bucket, no raw files | ADR-0005 |
 | Data sources | nflverse as the base; Sleeper's documented player list for injuries and depth (set aside for Phase 1) | ADR-0003, ADR-0004 |
-| Loading | Backfill 2022–2026 once, then incremental; play-by-play and depth charts current season only | ADR-0006, ADR-0013 |
+| Loading | Backfill 2022–2026 once, then incremental; every load an upsert, with a quarterly reconciliation of removed rows; play-by-play and depth charts recorded from 2026 on | ADR-0006, ADR-0013, ADR-0028 |
 | Data access | Hand-written SQL with mysql2; no ORM; schema changes by hand; no transform library | ADR-0010, ADR-0011, ADR-0012 |
 | Scoring | Calculated in the app from stored stats | ADR-0007 |
 | Frontend to API | The browser calls the API directly over public HTTPS; CORS limited to the frontend's origin | ADR-0014 |
@@ -189,7 +189,7 @@ Consolidated 2026-11-19, now that the hosting decision is active. What any hosti
 **Failure handling and recovery**
 
 - **One backend host is a single point of failure.** Acceptable for one user. The pipeline can always be rebuilt from nflverse by running the backfill again (ADR-0005).
-- **Overlap and restarts:** runs are not coordinated (no lock). Loads are idempotent (`team`, `player`, `game` upserted; facts replaced per piece), each piece's ledger row commits with its swap, and a failed publishing transaction is retried up to 2 more times in the run, each attempt logged (schema review D1, D2; retries not built). Accepted risk (owner, 2026-11-25): if an older copy of a file commits last, the next run sees the changed version and reloads it. Cost: duplicate work; on shutdown the scheduler stops starting runs and an interrupted run is redone safely (ADR-0006, ADR-0008).
+- **Overlap and restarts:** runs are not coordinated (no lock). Loads are idempotent (every table upserted; rows nflverse removed deleted only by the quarterly reconciliation, ADR-0028), each piece's ledger row commits with its swap, and a failed publishing transaction is retried up to 2 more times in the run, each attempt logged (schema review D1, D2; retries not built). Accepted risk (owner, 2026-11-25): if an older copy of a file commits last, the next run sees the changed version and reloads it. Cost: duplicate work; on shutdown the scheduler stops starting runs and an interrupted run is redone safely (ADR-0006, ADR-0008).
 - **Monitoring:** out of scope for now; a failure is visible in `job_run` and the logs (ETL spec D8).
 - **Backups:** a deployment-phase decision (ETL spec D16). Research: [`research/mysql-hosting-options-research-2026-11-08.md`](../research/mysql-hosting-options-research-2026-11-08.md).
 
@@ -221,7 +221,7 @@ The backend and frontend are separate apps in separate repos (ADR-0008). The Gra
 | Hand-written SQL, no ORM, schema changes by hand | Generated types and automated migrations | ADR-0010, ADR-0011 |
 | Browser calls the API directly | A private backend address; the API is public and must check every token | ADR-0014 |
 | GraphQL | Simpler REST for Phase 1, free HTTP caching, status-code monitoring | ADR-0017 |
-| Current-season-only play-by-play and depth charts | Historical play-by-play analytics | ADR-0013 |
+| Play-by-play and depth charts start in 2026 (no backfill) | Play-by-play analytics before 2026 | ADR-0013 |
 | Placeholder projections | Trade-tool quality until the model ships | Projections & rankings PRD |
 
 ## 10. Risks and technical debt
@@ -246,6 +246,7 @@ The open register — distinct from §9's *accepted* trade-offs. Each item names
 
 ## 12. Change log
 
+- **v2.9 (2026-11-27):** every table loaded by upsert with a quarterly reconciliation (ADR-0028); play-by-play and depth charts recorded from 2026 on, every season kept (ADR-0013 corrected). Loading row of §3 and the trade-off register updated.
 - **v2.8 (2026-11-25):** the schema principles review's decisions (D1–D8, owner, 2026-11-23 to 2026-11-25) reflected: overlapping runs an accepted risk with in-run retries of the publishing transaction (§6 overlap note, guardrail list). The table-level changes (foreign keys, mapping and lookup tables, descriptor columns) are in the ETL spec v2.27, §7.2, which this document does not repeat.
 - **v2.7 (2026-11-23):** at the owner's direction, pipeline runs are no longer coordinated; overlapping runs are handled by idempotent piece loads and next-run retry (ADR-0006, revised in place). *Claude's proposal, not confirmed by the owner:* each piece's ledger row written in its swap transaction. §5 data flow, §6 hard requirement 2, §6 overlap note and the guardrail table row updated.
 - **v2.6 (2026-11-19):** §10 "Risks and technical debt" added (owner-approved, from the arc42 gap analysis in `research/sadd-template-best-practices-research-2026-11-19.md`, with the register's form matching arc42 §11 (prioritized, mitigation per item)); growth triggers and the change log renumbered to §11/§12; the SADD template in `governance/templates.md` §3 rewritten the same day with per-section include/exclude rules.

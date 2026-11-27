@@ -1,52 +1,48 @@
-# ADR-0013: Keep play-by-play and depth charts for the current season only
+# ADR-0013: Record play-by-play and depth charts from the 2026 season onward
 
 **Status:** Accepted
-**Date:** 2026-11-06
-**Revised:** 2026-11-08, in place, at the owner's direction (not finalized): hosting references removed; purpose of play-by-play and source of depth charts stated. 2026-11-09: the size of the other datasets corrected (the earlier 270 MB figure didn't match the files) and the list completed. 2026-11-10, in place, at the owner's direction (not finalized): the other datasets keep 2022–2026, following ADR-0006's new start season; their size re-measured for those seasons.
+**Date:** 2026-11-06 · rewritten 2026-11-27
+**Revised:** 2026-11-08, 2026-11-09 and 2026-11-10, in place (hosting references removed; sizes corrected and re-measured). 2026-11-27, in place, at the owner's direction (not finalized): the earlier text, "keep play-by-play and depth charts for the current season only … past seasons are not backfilled or kept", recorded the owner's decision wrongly. The owner decided where recording *starts*, not that earlier seasons are removed later.
+**Implementation started:** 2026-11-09 (added by Claude on 2026-11-27 at the owner's direction: first implemented in the backend's initial commit d6d28ce, 2026-11-09)
 **Deciders:** William Sanchez
 
 ## Context
 
-[ADR-0006](ADR-0006-backfill-2022-2026-once-then-load-only-data-that-can-still-change.md) backfills 2022–2026 once for every nflverse source. All data is stored in MySQL ([ADR-0005](ADR-0005-store-all-pipeline-data-in-mysql-with-no-bucket.md)). Hosting is a deployment-phase decision and does not bear on this one.
+nflverse publishes play-by-play (one row per play, about 49,000 plays and 94–100 MB of CSV per season) and depth charts (dated snapshots from ESPN since 2025, roughly daily: 53 MB for 2025, 71 MB for 2026 to date). Together they are about two-thirds of all the data nflverse publishes for the seasons this app covers. Measured from the release files on 2026-11-06 and 2026-11-10.
 
-Measured sizes of nflverse's published CSV files, 2017–2026 (2026 to date), taken from the release download URLs on 2026-11-06:
-- **Play-by-play:** about 914 MB in total, 94–100 MB per full season. About two-thirds of all the data.
-- **Depth charts:** about 151 MB in total. About 3.4 MB per season through 2024; since nflverse began publishing dated depth charts in 2025, 53 MB for 2025 and 71 MB for 2026 so far.
-- **Everything else Phase 1 loads**, for 2022–2026 (weekly player stats about 36 MB, season rosters about 5 MB, snap counts about 10 MB, injuries about 3 MB, weekly team stats about 1 MB, plus the single files: schedules about 2 MB, players about 7 MB, teams under 0.1 MB): about 64 MB, measured from the files downloaded on 2026-11-10. For 2017–2026 it was about 127 MB. Weekly rosters aren't loaded.
-
-File sizes are not database sizes; the estimated size in MySQL is in the ETL spec §7.2.4.
-
-Both datasets are published by nflverse, the source Phase 1 uses: play-by-play at `pbp/play_by_play_<season>.csv.gz` and depth charts at `depth_charts/depth_charts_<season>.csv`. Depth charts come from ESPN since 2025 and are dated snapshots, roughly daily (285 snapshots between 2026-03-22 and 2026-11-08).
+The other nflverse datasets (weekly player and team stats, rosters, injuries, snap counts, schedules, players, teams) are backfilled from 2022 ([ADR-0006](ADR-0006-backfill-2022-2026-once-then-load-only-data-that-can-still-change.md)). Play-by-play is wanted for later analytics, not to recompute weekly stats, which nflverse already derives from it.
 
 ## Decision
 
-**Keep play-by-play and depth charts for the current season only.** Past seasons of these two datasets are not backfilled or kept. Every other nflverse dataset keeps the 2022–2026 history from ADR-0006.
+**Start recording play-by-play and depth charts with the 2026 season, with no backfill of earlier seasons, and keep every season recorded from then on.**
 
-Play-by-play is loaded for the current season to enable analytics later. It is not used to reconcile weekly stats, which nflverse already computes from play-by-play.
+- Seasons before 2026 of these two datasets are not loaded.
+- From 2026 on, each season's rows stay in the database after the season ends; nothing removes them at a season change.
+- These two datasets are loaded like every other table: by upsert, with past seasons version-checked daily and reloaded when nflverse republishes them, and rows removed only by the quarterly reconciliation of rows nflverse itself removed ([ADR-0028](ADR-0028-load-every-table-by-upsert-and-reconcile-removed-rows-quarterly.md)).
 
 ## Options Considered
 
-### Option A — Current season only for play-by-play and depth charts (chosen)
+### Option A — Record from 2026 on, no backfill, keep every season (chosen)
 | Dimension | Assessment |
 |---|---|
-| Stored size of these two datasets | About one season: roughly 100 MB of play-by-play CSV plus one season of depth charts |
-| Past seasons' stats | From nflverse's weekly player stats, not play-by-play |
-| Past depth charts | Not kept |
+| Backfill size | None for these two datasets (play-by-play alone is about 914 MB of CSV for 2017–2026) |
+| History | Builds from 2026 forward; nothing recorded is lost |
+| Growth | About 100 MB of play-by-play CSV and 50–70 MB of depth charts a season |
 
-### Option B — Full history from ADR-0006's first season (not chosen)
-Every dataset has the same history. Play-by-play alone is about 914 MB as CSV, and dated depth charts grow by tens of MB each season.
+### Option B — Backfill these two datasets from 2022 like the others
+Not chosen by the project owner: the backfill would be several times larger for data not yet used.
+
+### Option C — Keep only the current season, removing the previous one at each season change
+The earlier, mistaken record of this decision. Not the owner's decision.
 
 ## Consequences
 
-**Easier:** the largest and fastest-growing datasets stay at about one season's size; the backfill is much smaller.
-**Harder / to revisit:**
-- Stats for past seasons come only from nflverse's weekly player stats; analytics that need play-by-play for a past season aren't available.
-- Past seasons' depth charts aren't available.
-- When a new season starts, the previous season's play-by-play and depth-chart rows are removed.
+**Easier:** no large backfill; the play and depth-chart history grows on its own.
+**Harder / to revisit:** analytics needing play-by-play or depth charts before 2026 aren't possible without a backfill later; storage grows by one season of each per year. Revisit if a feature needs earlier seasons.
 
 ## Relationship to other decisions
 
-- **Narrows** [ADR-0006](ADR-0006-backfill-2022-2026-once-then-load-only-data-that-can-still-change.md): the 2022–2026 backfill excludes play-by-play and depth charts, which are loaded for the current season only. ADR-0006's load strategy is otherwise unchanged.
-- **Follows from** [ADR-0005](ADR-0005-store-all-pipeline-data-in-mysql-with-no-bucket.md) (all data in MySQL).
+- **Narrows** [ADR-0006](ADR-0006-backfill-2022-2026-once-then-load-only-data-that-can-still-change.md): its 2022 backfill excludes these two datasets.
+- **Depends on** [ADR-0028](ADR-0028-load-every-table-by-upsert-and-reconcile-removed-rows-quarterly.md) (upsert loads, quarterly reconciliation) and [ADR-0005](ADR-0005-store-all-pipeline-data-in-mysql-with-no-bucket.md) (MySQL is the only store).
 
-Sources: [nflverse-data releases](https://github.com/nflverse/nflverse-data/releases), [nflreadr changelog (dated depth charts from 2025)](https://nflverse.r-universe.dev/nflreadr/NEWS.txt), [nflreadr depth chart dictionary](https://ftp.fau.de/cran/web/packages/nflreadr/vignettes/dictionary_depth_charts.html).
+Sources: [nflverse-data releases](https://github.com/nflverse/nflverse-data/releases), [nflreadr changelog (dated depth charts from 2025)](https://nflverse.r-universe.dev/nflreadr/NEWS.txt).

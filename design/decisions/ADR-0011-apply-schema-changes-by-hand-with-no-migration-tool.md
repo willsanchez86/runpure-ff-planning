@@ -3,6 +3,7 @@
 **Status:** Accepted
 **Date:** 2026-11-05
 **Revised:** 2026-11-08, in place, at the owner's direction (not finalized): wording of its link to ADR-0010 updated after ADR-0010's revision. 2026-11-09: keeping each statement in order in `sql/` recorded as part of the decision, as the ETL spec and system design already apply it. 2026-11-09: **Rules out** line added for the doc check.
+**Implementation started:** 2026-11-09 (added by Claude on 2026-11-27 at the owner's direction: first implemented in the backend's initial commit d6d28ce, 2026-11-09)
 **Deciders:** William Sanchez
 **Rules out:** migration tool
 

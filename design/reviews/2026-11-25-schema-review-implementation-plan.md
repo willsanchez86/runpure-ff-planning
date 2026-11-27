@@ -1,9 +1,9 @@
 # Implementation plan — schema principles review decisions D1–D8 (2026-11-25)
 
-**Status:** Draft, written by Claude from the owner's decisions. The plan, and every build detail marked *(build detail)*, is Proposed until the owner approves it; the decisions themselves are the owner's.
+**Status:** Draft (updated 2026-11-27 for the revised D8: no `play_participant`; the migration now creates 6 tables, drops 126 columns and adds 62 foreign keys), written by Claude from the owner's decisions. The plan, and every build detail marked *(build detail)*, is Proposed until the owner approves it; the decisions themselves are the owner's.
 **Implements:** [schema principles review](2026-11-24-schema-principles-review.md) §5.1, decisions D1–D8 (owner, 2026-11-23 to 2026-11-25).
 **Database change:** [`2026-11-24-schema-principles-review-migration.sql`](2026-11-24-schema-principles-review-migration.sql), copied into the backend as `sql/0015_schema_review.sql`.
-**Not in scope (open in the review §5.2):** O5 fact-table load method, O6 `created_at`/`updated_at`, O8 per-column `NOT NULL`, O10 small fixes (renames, database charset script, explicit `ON DELETE RESTRICT`, strict `sql_mode`, confirming the ledger write in the swap transaction).
+**Also implements (decided 2026-11-27):** ADR-0028 (every table upserted; quarterly reconciliation on Jan 1, Apr 1, Jul 1, Oct 1), ADR-0029 (`created_at`/`updated_at` on every table, UTC sessions), ADR-0013 as corrected (play-by-play and depth charts kept for every season from 2026). **Not in scope (open in the review §5.2):** O8 per-column `NOT NULL`, O10 small fixes (renames, database charset script, explicit `ON DELETE RESTRICT`, strict `sql_mode`, confirming the ledger write in the swap transaction).
 **Backend state checked:** working tree of `runpure-ff-backend` on 2026-11-25, including the uncommitted run-lock removal. File and line references in §8 are to that tree.
 
 ---
@@ -19,7 +19,7 @@
 | D5 Unidentifiable players | — | Roster exclusion; unlinked snap and depth rows counted and re-linked | — |
 | D6 Lookup tables | `stadium`, `position_group`, `position` | Lookups filled before their rows | — |
 | D7 Descriptors off fact rows | 164 columns dropped; 3 added to `game` | Column maps split into "read from CSV" and "write to table"; copied values protected from overwrite | QB names from `player` |
-| D8 `play_participant` | New table | Emitted from play-by-play | — |
+| D8 `play`'s numbered player columns kept (ADR-0027) | 22 foreign keys on the slot player columns; the 14 slot team columns lose theirs (64-index limit) | None beyond the column map | — |
 
 ## 2. The pipeline run after the change, step by step
 
@@ -30,11 +30,11 @@
 5. **Publish in one transaction**, per dataset:
    - **players:** upsert `player`; columns that other loads fill (`short_name`, `first_name`, `last_name`, `football_name`, `birth_date`, `college_name`) keep their stored value when the file's value is empty *(build detail)*. Write `player_source` from the 7 ID columns: insert new pairs, update changed ones; a value held by another player, or duplicated within the file, is skipped and logged (D4). Before changing a PFR ID, empty `snap_count.source_code` on rows that point at the old one *(build detail: the snap foreign key would otherwise block the change)*.
    - **schedules:** upsert `stadium` (current name: the name in the stadium's most recent season) *(build detail)*, then upsert `game`; `game.stadium` keeps the play-by-play name where play-by-play has set one *(build detail)*. Write `game_source` from the 7 ID columns; an ID shared by two games is skipped and logged (D4).
-   - **rosters:** replace the season's rows. Gap-fill `player_source` from the 11 ID columns only where the player has no ID for that provider; a differing value is logged, not stored (`players.csv` wins, D4). Fill `player` columns that are still empty from the roster *(build detail)*.
-   - **weekly stats, injuries:** replace the season's rows, as today.
-   - **snap counts:** replace the season's rows, scoped through `game.season` because `snap_count` no longer has a `season` column. Set `source_code = 'pfr'` where `player_source` knows the PFR ID, otherwise leave it empty (D4, D5).
-   - **depth charts:** upsert `position_group` and `position`, then replace the table; an empty `gsis_id` is filled from the ESPN ID through `player_source` (D5).
-   - **play-by-play:** replace the table (deleting a play removes its participants), insert plays, insert `play_participant` rows from the 60 slot columns (D8), update `game.start_time`, `weather`, `home_opening_kickoff` and `stadium` for the season's games (D7), write `game_source` `nfl_api` rows (D4).
+   - **rosters:** upsert the season's rows (ADR-0028). Gap-fill `player_source` from the 11 ID columns only where the player has no ID for that provider; a differing value is logged, not stored (`players.csv` wins, D4). Fill `player` columns that are still empty from the roster *(build detail)*.
+   - **weekly stats, injuries:** upsert the season's rows (ADR-0028).
+   - **snap counts:** upsert the season's rows (ADR-0028). Set `source_code = 'pfr'` where `player_source` knows the PFR ID, otherwise leave it empty (D4, D5).
+   - **depth charts:** upsert `position_group` and `position`, then upsert the snapshot rows (every season from 2026 kept, ADR-0013); an empty `gsis_id` is filled from the ESPN ID through `player_source` (D5).
+   - **play-by-play:** upsert plays for the season (every season from 2026 kept, ADR-0013) (the 60 numbered slot columns stay; D8), update `game.start_time`, `weather`, `home_opening_kickoff` and `stadium` for the season's games (D7), write `game_source` `nfl_api` rows (D4).
 6. **If the publishing transaction fails**, retry it up to 2 more times; staging survives the rollback, so nothing is downloaded again. Retry any error, including deadlock (1213) and lock-wait timeout (1205); a foreign-key or duplicate-key error (1452, 1062) is logged and fails at once, since a retry gives the same result *(build detail; the owner's rule is "any failure retried up to 2 more times")*. Every attempt is logged (D1).
 7. **After all pieces:** re-link rows loaded earlier without a match: `snap_count.source_code` and `depth_chart.gsis_id` where a mapping now exists (D5).
 8. **Close** the `job_run` row with its outcome and, stored in the row, the counts and logs: excluded roster rows, unlinked snap and depth rows, skipped and conflicting provider IDs, retries (D1, D4, D5). Today these counts reach only the console.
@@ -56,7 +56,7 @@ MySQL checks a foreign key on every statement (R7), and staging tables made with
 | 8 | play-by-play | Needs games and players; feeds `game` columns |
 
 - `team`, `player`, `game` are upserted and never deleted (D2); `source`, `stadium`, `position_group`, `position` only grow.
-- Fact tables keep delete-and-replace per piece (O5 open): nothing references them except `play`, whose participants go with it (`ON DELETE CASCADE`, *build detail*).
+- Every table is upserted (ADR-0028): no load deletes rows, so no foreign key is ever violated by a delete during a load. Only the quarterly reconciliation deletes, children before parents.
 - If a parent piece fails, its children fail on foreign keys in the same run and are retried on the next run.
 
 ## 4. Implementation steps
@@ -68,7 +68,7 @@ Effort assumes the backend tests run locally against `TEST_DATABASE_URL`.
 | 1 | Open the GitHub issue(s) (governance: work tracking); branch the backend from `main` | Issue linked in the PR | 15 min |
 | 2 | Commit the uncommitted run-lock removal on that branch; apply `sql/0014` (pre-check first) | Pre-check returns no rows | 30 min |
 | 3 | Add `sql/0015_schema_review.sql`; update the `CREATE TABLE` files `0004`–`0012` and their header comments to the new shape | Fresh database from `0001`–`0015` builds; migration applies to a copy of live (§6) | 1–2 h |
-| 4 | Registry: new load order; `replace: 'upsert'` for players and schedules; split each column map into "read from CSV" and "write to table"; metadata for derived tables (provider IDs, lookups, participants, game columns) so the engine stays generic | Typecheck; registry unit tests | 3–4 h |
+| 4 | Registry: new load order; upsert for every dataset (ADR-0028); split each column map into "read from CSV" and "write to table"; metadata for derived tables (provider IDs, lookups, participants, game columns) so the engine stays generic | Typecheck; registry unit tests | 3–4 h |
 | 5 | Wide staging and the per-dataset publish steps of §2 step 5 | Integration tests per dataset (§5) | 1.5–2 days |
 | 6 | Download retry; publish retry; stored logs and counts on `job_run` | Unit and integration tests (§5) | 4–6 h |
 | 7 | `seasonsToLoad`: past seasons for scheduled runs | Unit test | 1 h |
@@ -77,15 +77,17 @@ Effort assumes the backend tests run locally against `TEST_DATABASE_URL`.
 | 10 | API: snap percentage through `player_source`; QB names through `player` | API tests (none exist today for these) | 2–3 h |
 | 11 | Docs: backend `README.md`, `docs/api-contract/02-field-mapping.md`, `sql/README.md` | Read-through | 1 h |
 | 12 | Full local run: fresh database, backfill 2022–2026, compare with the review §5.3 counts | Counts match | 2 h |
+| 12a | Upsert for every dataset (remove the delete paths at `load.service.ts:102-107`); quarterly reconciliation job (`src/jobs/reconcile.ts`, scheduled Jan 1, Apr 1, Jul 1, Oct 1 after 06:00) with logged deletion counts; play-by-play and depth charts treated as history datasets from 2026 | Integration tests: upsert leaves unchanged rows untouched (`updated_at` unchanged); reconciliation deletes only rows missing from the current file, never `team`/`player`/`game` | 1 day |
+| 12b | Every database connection sets `time_zone = '+00:00'` (`src/db/pool.ts`) | Test: `SELECT @@session.time_zone` is `+00:00` | 30 min |
 | 13 | Production: stop the scheduler, back up, apply `0015`, deploy, run once, restart | `migration_log` grid; first `job_run` is `ok` | 1 h |
 
-Total: about 4–5 working days.
+Total: about 5–6 working days.
 
 ## 5. Tests
 
 **Will break and must be updated:** `season.test.ts` (ingest returned one season); `pipeline.integration.test.ts` (depth rows use a player not in `player` and dropped position columns; delete order in `beforeEach`; the overlap test tolerates a deadlock, which the publish retry should now absorb).
 
-**To add (unit):** download retry (5xx, 429, network retried 3 times; 404 and disallowed host not retried); past-season `seasonsToLoad`; roster exclusion count; participant emission; provider-ID normalization to text.
+**To add (unit):** download retry (5xx, 429, network retried 3 times; 404 and disallowed host not retried); past-season `seasonsToLoad`; roster exclusion count; no participant emission (D8 revised); provider-ID normalization to text.
 
 **To add (integration):**
 - Publish retry on a forced deadlock or lock-wait timeout; each attempt logged.
@@ -94,14 +96,14 @@ Total: about 4–5 working days.
 - An empty depth-chart `gsis_id` is filled from a known ESPN ID; an unknown ESPN ID stays empty and is counted.
 - `players.csv` wins over the roster; a second player claiming an ID is skipped and logged; two games sharing a legacy ID are both skipped and logged.
 - Player and game rows absent from a later file are kept.
-- Snap counts replace one season without a `season` column.
+- Snap counts upsert one season without a `season` column; the reconciliation scopes them through `game`.
 - A schedules reload does not revert the play-by-play stadium name; a players reload does not erase copied names.
 - A play-by-play reload with participants present succeeds.
 - API: snap percentage through `player_source`; game QB names through `player`.
 
 ## 6. Migration test record (2026-11-25)
 
-MySQL 8.4 in a throwaway container; schema from backend `sql/0001`–`0014`; seeded with players (two sharing a Smart ID), games (two sharing a legacy ID), a roster row for an unknown player, a roster ESPN ID conflicting with `players.csv`, snap rows with a known and an unknown PFR ID, depth rows with and without `gsis_id`, and a play with six slot players. The migration ran without errors: 7 tables created, 164 columns dropped, 40 foreign keys added, every count as expected. Rejected as intended: an unknown PFR ID with `source_code = 'pfr'`, a roster row for an unknown player, a participant for an unknown player, one PFR ID for two players, an unknown position group, deleting a game that has plays (errors 1452, 1062, 1451). Accepted: an unknown PFR ID with an empty `source_code`; deleting a play removed its participants. **Before production:** run it on a copy of the live database (step 3) to measure time and the real counts.
+MySQL 8.4 in a throwaway container; schema from backend `sql/0001`–`0014`; seeded with players (two sharing a Smart ID), games (two sharing a legacy ID), a roster row for an unknown player, a roster ESPN ID conflicting with `players.csv`, snap rows with a known and an unknown PFR ID, depth rows with and without `gsis_id`, and a play with six slot players. The migration ran without errors: 6 tables created, 126 columns dropped, 62 foreign keys added (retested 2026-11-27 for the revised D8: `play` has 55 indexes; unknown slot players rejected; an unknown slot team code accepted, as decided), every count as expected. Rejected as intended: an unknown PFR ID with `source_code = 'pfr'`, a roster row for an unknown player, one PFR ID for two players, an unknown position group, deleting a game that has plays (errors 1452, 1062, 1451). Accepted: an unknown PFR ID with an empty `source_code`; . **Before production:** run it on a copy of the live database (step 3) to measure time and the real counts.
 
 ## 7. Governance before the build
 
@@ -124,9 +126,9 @@ What must change in `runpure-ff-backend`, by file. Line numbers are from the wor
 |---|---|---|---|
 | 1 | Schedules and players load after the fact tables | `datasets.ts:132-137` | New order (§3) |
 | 2 | Staging is `CREATE TEMPORARY TABLE … LIKE <target>`, so it can't hold columns the target loses | `load.service.ts:63` | Wide staging (§2 step 4) |
-| 3 | Snap counts' season delete uses `season`, which is dropped | `load.service.ts:103-104`; `validate.service.ts:128,138` | Scope the delete through `game` |
+| 3 | Snap counts' season delete uses `season`, which is dropped | `load.service.ts:103-104`; `validate.service.ts:128,138` | No longer applies: loads upsert and never delete (ADR-0028); the reconciliation scopes snap rows through `game` |
 | 4 | Upserts would overwrite copied names and the play-by-play stadium name | `load.service.ts:93-101`; `dataset-columns.ts:16` | Keep stored values when the file's value is empty; keep play-by-play's stadium |
-| 5 | `DELETE FROM play` fails once participants reference plays | `load.service.ts:107` | `ON DELETE CASCADE` on `play_participant` (migration) |
+| 5 | `DELETE FROM play` would have failed once participants referenced plays | `load.service.ts:107` | No longer applies: no `play_participant` table (D8 revised 2026-11-27) |
 | 6 | Changing a player's PFR ID is blocked by the snap foreign key | `snap_count` → `player_source` | Empty `source_code` on rows pointing at the old ID first |
 | 7 | The snap reference check queries `player.pfr_id`, which is dropped | `datasets.ts:124` | Remove the warn-only checks (step 9) |
 
